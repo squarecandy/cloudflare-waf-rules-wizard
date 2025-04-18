@@ -55,6 +55,7 @@ require_once 'config.php';
 						echo '<h2>' . $rule['description'] . '<br>' . $rule['action'] . '</h2>';
 						echo '<textarea>' . $rule['expression'] . '</textarea>';
 					}
+					echo '<br><br><hr><br>';
 				} elseif ( isset( $_POST['pw_create_ruleset'] ) ) {
 					pw_cloudflare_ruleset_manager_process_zones( $rules );
 				}
@@ -74,12 +75,14 @@ require_once 'config.php';
 			<h2>Select Ruleset to Apply:</h2>
 			<select name="pw_ruleset">
 				<?php foreach ( $rulesets as $ruleset_key => $ruleset ) : ?>
-					<option value="<?php echo $ruleset_key; ?>">
+					<?php $selected = isset( $_POST['pw_ruleset'] ) && $_POST['pw_ruleset'] === $ruleset_key ? ' selected' : ''; ?>
+					<option value="<?php echo $ruleset_key; ?>"<?php echo $selected; ?>>
 						<?php echo $ruleset['description']; ?>
 					</option>
 				<?php endforeach; ?>
 			</select>
 			<br/>
+			<input type="submit" class="button button-secondary" name="pw_test_ruleset" value="Test Ruleset">
 			<h2>Select Domains to Reset WAF Custom Rules on:</h2>
 			<?php foreach ( $zones as $zone ) : ?>
 				<label>
@@ -89,7 +92,6 @@ require_once 'config.php';
 			<?php endforeach; ?>
 			<br/>
 			<input type="submit" class="button button-primary" name="pw_create_ruleset" value="Create/Overwrite All WAF Rules"><br><br>
-			<input type="submit" class="button button-secondary" name="pw_test_ruleset" value="Test Ruleset">
 		</form>
 		<hr>
 		<p>&nbsp;</p>
