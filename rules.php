@@ -314,7 +314,7 @@ $squarecandy_rules_free_ecommmerce['good_actors_allow']['expression'] = $allow_e
 $squarecandy_rules_pro = array(
 	array(
 		'description'       => 'Good Actors Allow',
-		'expression'        => $allow_expression_free_ecommerce,
+		'expression'        => $allow_expression_ecommerce,
 		'action'            => 'skip',
 		'action_parameters' => array(
 			'ruleset'  => 'current',
