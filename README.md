@@ -34,6 +34,6 @@ All configurations are set in config.php and should never be checked in to git. 
 
 * Create an "Update" Mode that will only update rules found with identical descriptions, and will leave all other existing rules as they are.
 * Create an intermediary "are you sure" step that displays the existing rules and asks if you want to proceed, unless they are identical or completely blank.
-* Option to backup existing rules to a file.
-* System to restore rules from a backup file.
+* Backup/Restore system: backup existing rules to a file (probably json) and allow restoring from backup files.
+
 
