@@ -5,12 +5,12 @@
  * This script is a standalone version of the Cloudflare WAF Rules Wizard plugin.
  * It allows users to create and manage custom WAF rules for their Cloudflare accounts.
  *
- * @package   CloudflareWAFRulesWizard
+ * @package   CloudflareWAFRulesWizardStandalone
  * @version   1.0
  * @category  Cloudflare
- * @author    Peter Wise, Square Candy; Troy Glancy, Web Agency Hero; Rob Marlbrough, Press Wizards
+ * @author    Peter Wise, Square Candy; Rob Marlbrough, Press Wizards; Troy Glancy, Web Agency Hero
  * @license   GPL-3.0-or-later
- * @link      https://example.com
+ * @link      https://github.com/squarecandy/cloudflare-waf-rules-wizard
  * @php       7.4
  */
 
