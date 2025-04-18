@@ -44,13 +44,20 @@ require_once 'config.php';
 		require_once 'rules.php';
 		require_once 'functions.php';
 
-		if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! empty( $_POST['pw_ruleset'] ) ) {
+		if ( ( isset( $_POST['pw_create_ruleset'] ) || isset( $_POST['pw_test_ruleset'] ) ) && isset( $_POST['pw_ruleset'] ) && ! empty( $_POST['pw_ruleset'] ) ) {
 			$ruleset_name = $_POST['pw_ruleset'];
 			$ruleset_name = preg_replace( '/[^a-z0-9_]/', '_', $ruleset_name );
 
 			if ( isset( $rulesets[ $ruleset_name ] ) ) {
 				$rules = $rulesets[ $ruleset_name ]['rules'];
-				pw_cloudflare_ruleset_manager_process_zones( $rules );
+				if ( isset( $_POST['pw_test_ruleset'] ) ) {
+					foreach ( $rules as $rule ) {
+						echo '<h2>' . $rule['description'] . '<br>' . $rule['action'] . '</h2>';
+						echo '<textarea>' . $rule['expression'] . '</textarea>';
+					}
+				} elseif ( isset( $_POST['pw_create_ruleset'] ) ) {
+					pw_cloudflare_ruleset_manager_process_zones( $rules );
+				}
 			} else {
 				echo '<div class="notice notice-error"><p>Invalid ruleset selected.</p></div>';
 			}
@@ -81,7 +88,8 @@ require_once 'config.php';
 				</label><br>
 			<?php endforeach; ?>
 			<br/>
-			<input type="submit" class="button button-primary" name="pw_create_ruleset" value="Create/Overwrite All WAF Rules">
+			<input type="submit" class="button button-primary" name="pw_create_ruleset" value="Create/Overwrite All WAF Rules"><br><br>
+			<input type="submit" class="button button-secondary" name="pw_test_ruleset" value="Test Ruleset">
 		</form>
 		<hr>
 		<p>&nbsp;</p>
