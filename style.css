@@ -1,0 +1,33 @@
+body {
+	background: #e2e2e2;
+	color: #333333;
+	font-family: system-ui, sans-serif;
+	padding: 5vw;
+	margin: 0 auto;
+	max-width: 50em;
+}
+
+.notice {
+	margin: 1em 0;
+	padding: 1em;
+	border: 2px solid #333333;
+	background: #dddddd;
+}
+
+.notice-success {
+	border-color: #4CAF50;
+	color:#175319;
+	background: #e1ede3;
+}
+
+.notice-error {
+	border-color: #F44336;
+	color:#5c1f1f;
+	background: #f2e1e1;
+}
+
+.notice-warning {
+	border-color: #FF9800;
+	color:#5c4f1f;
+	background: #f2e1d6;
+}
