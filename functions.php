@@ -21,39 +21,41 @@ function pw_make_curl_request( $url, $method, $headers, $data = null ) {
 }
 
 // Get the list of all zones based on the account ID
-function pw_get_cloudflare_zones( $account_id, $api_key, $api_email ) {
+function pw_get_cloudflare_zones( $account_ids, $api_key, $api_email ) {
 	$all_zones = array(); // Array to hold all zones
-	$page      = 1;
 	$per_page  = 50; // The maximum items per page you can request from the Cloudflare API for this endpoint
 
-	do {
-		$url      = "https://api.cloudflare.com/client/v4/zones?account.id=$account_id&page=$page&per_page=$per_page";
-		$headers  = array(
-			"X-Auth-Email: $api_email",
-			"X-Auth-Key: $api_key",
-			'Content-Type: application/json',
-		);
-		$response = pw_make_curl_request( $url, 'GET', $headers );
+	foreach ( $account_ids as $account_id ) {
+		$page = 1;
+		do {
+			$url      = "https://api.cloudflare.com/client/v4/zones?account.id=$account_id&page=$page&per_page=$per_page";
+			$headers  = array(
+				"X-Auth-Email: $api_email",
+				"X-Auth-Key: $api_key",
+				'Content-Type: application/json',
+			);
+			$response = pw_make_curl_request( $url, 'GET', $headers );
 
-		if ( isset( $response['result'] ) ) {
-			// Merge the retrieved zones into the allZones array
-			$all_zones = array_merge( $all_zones, $response['result'] );
-		}
+			if ( isset( $response['result'] ) ) {
+				// Merge the retrieved zones into the allZones array
+				$all_zones = array_merge( $all_zones, $response['result'] );
+			}
 
-		// Check if there are more pages to fetch
-		$total_pages = isset( $response['result_info']['total_pages'] ) ? (int) $response['result_info']['total_pages'] : 1;
-		$page++;
+			// Check if there are more pages to fetch
+			$total_pages = isset( $response['result_info']['total_pages'] ) ? (int) $response['result_info']['total_pages'] : 1;
+			$page++;
 
-	} while ( $page <= $total_pages );
+		} while ( $page <= $total_pages );
+	}
 
 	return $all_zones;
 }
 
 function pw_cloudflare_ruleset_manager_process_zones( $rules = array() ) {
-	$email      = CLOUDFLARE_EMAIL;
-	$api_key    = CLOUDFLARE_API_KEY;
-	$account_id = CLOUDFLARE_ACCOUNT_ID;
-	$zone_ids   = isset( $_POST['pw_zone_ids'] ) ? $_POST['pw_zone_ids'] : array();
+	$email       = CLOUDFLARE_EMAIL;
+	$api_key     = CLOUDFLARE_API_KEY;
+	$account_ids = CLOUDFLARE_ACCOUNT_IDS;
+	$zone_ids    = isset( $_POST['pw_zone_ids'] ) ? $_POST['pw_zone_ids'] : array();
 
 	if ( empty( $zone_ids ) ) {
 		echo '<div class="notice notice-error"><p>Please enter all the required fields.</p></div>';
@@ -106,7 +108,7 @@ function pw_cloudflare_ruleset_manager_process_zones( $rules = array() ) {
 		return $response;
 	}
 
-	$zones = pw_get_cloudflare_zones( $account_id, $api_key, $email );
+	$zones = pw_get_cloudflare_zones( $account_ids, $api_key, $email );
 
 	foreach ( $zone_ids as $zone_id ) {
 		$zone_name = '';

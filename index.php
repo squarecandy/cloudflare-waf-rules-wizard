@@ -28,10 +28,11 @@ require_once 'config.php';
 		if (
 			! defined( 'CLOUDFLARE_API_KEY' ) ||
 			! defined( 'CLOUDFLARE_EMAIL' ) ||
-			! defined( 'CLOUDFLARE_ACCOUNT_ID' ) ||
+			! defined( 'CLOUDFLARE_ACCOUNT_IDS' ) ||
 			empty( CLOUDFLARE_API_KEY ) ||
 			empty( CLOUDFLARE_EMAIL ) ||
-			empty( CLOUDFLARE_ACCOUNT_ID )
+			empty( CLOUDFLARE_ACCOUNT_IDS ) ||
+			! is_array( CLOUDFLARE_ACCOUNT_IDS )
 		) :
 			?>
 			<div class="notice notice-error"><p>Please set your Cloudflare API credentials in the config.php file.</p></div>
@@ -58,7 +59,7 @@ require_once 'config.php';
 		<form method="post">
 			<?php
 			$zones = pw_get_cloudflare_zones(
-				CLOUDFLARE_ACCOUNT_ID,
+				CLOUDFLARE_ACCOUNT_IDS,
 				CLOUDFLARE_API_KEY,
 				CLOUDFLARE_EMAIL
 			);
