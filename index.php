@@ -57,6 +57,9 @@ require_once 'config.php';
 					}
 					echo '<br><br><hr><br>';
 				} elseif ( isset( $_POST['pw_create_ruleset'] ) ) {
+					// reset the keys of the rules array (causes json errors with CF API if not done)
+					$rules = array_values( $rules );
+					// process the rules
 					pw_cloudflare_ruleset_manager_process_zones( $rules );
 				}
 			} else {

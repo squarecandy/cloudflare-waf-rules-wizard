@@ -141,3 +141,12 @@ function pw_cloudflare_ruleset_manager_process_zones( $rules = array() ) {
 		}
 	}
 }
+
+
+if ( ! function_exists( 'pre_r' ) ) :
+	function pre_r( $array ) {
+		print '<pre class="squarecandy-pre-r">';
+		print_r( $array ); // phpcs:ignore
+		print '</pre>';
+	}
+endif;
