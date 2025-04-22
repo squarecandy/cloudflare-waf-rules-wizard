@@ -6,7 +6,7 @@
  * It allows users to create and manage custom WAF rules for their Cloudflare accounts.
  *
  * @package   CloudflareWAFRulesWizardStandalone
- * @version   2.0.1
+ * @version   2.0.2
  * @category  Cloudflare
  * @author    Peter Wise, Square Candy; Rob Marlbrough, Press Wizards; Troy Glancy, Web Agency Hero
  * @license   GPL-3.0-or-later
