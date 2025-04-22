@@ -86,8 +86,8 @@ $cloud_asns = array(
 	'206092', // Internet Utilities Europe and Asia Limited (UK)
 	// '135061', // UNICOM-ShenZhen-IDC
 	// '23724', // China Telecom
-	'4134', // China Backbone (unknown probably IA/TikTok)
-	'4837', // China Backbone (unknown probably IA/TikTok)
+	'4134', // CHINANET-BACKBONE (probably AI/TikTok) - abuse on mdhistory.org 2025/01
+	'4837', // CHINANET-BACKBONE (probably AI/TikTok) - abuse on mdhistory.org 2025/01
 	// '4808', // China Telecom
 );
 $cloud_asns = implode( ' ', $cloud_asns );
@@ -95,6 +95,7 @@ $cloud_asns = implode( ' ', $cloud_asns );
 // Challenge/Block Web Hosting ASNs
 // @TODO - add comments for what we're actually blocking here...
 $web_hosts = array(
+	'11590', // Bucklog SARL (France) - abuse on mdhistory.org 2025/04
 	'26496', // GoDaddy
 	'398101', // GoDaddy
 	'18450', // WebNX
@@ -223,6 +224,7 @@ $aggressive_crawlers = array(
 	'newt activex',
 	'nsauditor',
 	'pbrowse',
+	'perplexitybot',
 	'petalbot',
 	'peval 1.4b',
 	'poirot',
