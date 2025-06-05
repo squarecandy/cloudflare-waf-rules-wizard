@@ -25,6 +25,20 @@ require_once 'config.php';
 	<div class="container">
 		<h1>Cloudflare WAF Rules Wizard</h1>
 		<?php
+		// Navigation
+		$current_page = isset( $_GET['page'] ) ? $_GET['page'] : 'waf-rules';
+		?>
+		<div class="nav-container">
+			<ul class="nav-menu">
+				<li class="<?php echo 'waf-rules' === $current_page ? 'active' : ''; ?>">
+					<a href="index.php?page=waf-rules">WAF Rules Manager</a>
+				</li>
+				<li class="<?php echo 'security-status' === $current_page ? 'active' : ''; ?>">
+					<a href="index.php?page=security-status">Security Features Status</a>
+				</li>
+			</ul>
+		</div>
+		<?php
 		if (
 			! defined( 'CLOUDFLARE_API_KEY' ) ||
 			! defined( 'CLOUDFLARE_EMAIL' ) ||
@@ -44,97 +58,17 @@ require_once 'config.php';
 		require_once 'rules.php';
 		require_once 'functions.php';
 
-		if ( ( isset( $_POST['pw_create_ruleset'] ) || isset( $_POST['pw_test_ruleset'] ) ) && isset( $_POST['pw_ruleset'] ) && ! empty( $_POST['pw_ruleset'] ) ) {
-			$ruleset_name = $_POST['pw_ruleset'];
-			$ruleset_name = preg_replace( '/[^a-z0-9_]/', '_', $ruleset_name );
-
-			if ( isset( $rulesets[ $ruleset_name ] ) ) {
-				$rules = $rulesets[ $ruleset_name ]['rules'];
-				if ( isset( $_POST['pw_test_ruleset'] ) ) {
-					foreach ( $rules as $rule ) {
-						echo '<h2>' . $rule['description'] . '<br>' . $rule['action'] . '</h2>';
-						echo '<textarea>' . $rule['expression'] . '</textarea>';
-					}
-					echo '<br><br><hr><br>';
-				} elseif ( isset( $_POST['pw_create_ruleset'] ) ) {
-					// reset the keys of the rules array (causes json errors with CF API if not done)
-					$rules = array_values( $rules );
-					// process the rules
-					pw_cloudflare_ruleset_manager_process_zones( $rules );
-				}
-			} else {
-				echo '<div class="notice notice-error"><p>Invalid ruleset selected.</p></div>';
-			}
+		// Load the appropriate page content
+		if ( 'security-status' === $current_page ) {
+			include 'security-status.php';
+		} else { // Default to WAF Rules page
+			include 'waf-rules.php';
 		}
 		?>
-		<form method="post">
-			<?php
-			$zones = pw_get_cloudflare_zones(
-				CLOUDFLARE_ACCOUNT_IDS,
-				CLOUDFLARE_API_KEY,
-				CLOUDFLARE_EMAIL
-			);
-			?>
-			<h2>Select Ruleset to Apply:</h2>
-			<select name="pw_ruleset">
-				<?php foreach ( $rulesets as $ruleset_key => $ruleset ) : ?>
-					<?php $selected = isset( $_POST['pw_ruleset'] ) && $_POST['pw_ruleset'] === $ruleset_key ? ' selected' : ''; ?>
-					<option value="<?php echo $ruleset_key; ?>"<?php echo $selected; ?>>
-						<?php echo $ruleset['description']; ?>
-					</option>
-				<?php endforeach; ?>
-			</select>
-			<br/>
-			<input type="submit" class="button button-secondary" name="pw_test_ruleset" value="Test Ruleset">
-			<h2>Select Domains to Reset WAF Custom Rules on:</h2>
-			<?php foreach ( $zones as $zone ) : ?>
-				<label>
-					<input type="checkbox" name="pw_zone_ids[]" value="<?php echo $zone['id']; ?>">
-					<?php echo $zone['name']; ?>
-				</label><br>
-			<?php endforeach; ?>
-			<br/>
-			<input type="submit" class="button button-primary" name="pw_create_ruleset" value="Create/Overwrite All WAF Rules"><br><br>
-		</form>
-		<hr>
-
-		<!-- New section for Security Features Status Table -->
-		<h2>Cloudflare Security Features Status</h2>
-		<table class="security-table">
-			<thead>
-				<tr>
-					<th>Domain</th>
-					<th>Bot Fight Mode</th>
-					<th>Block AI Bots</th>
-					<th>AI Labyrinth</th>
-					<th>Override robots.txt</th>
-				</tr>
-			</thead>
-			<tbody>
-				<?php
-				foreach ( $zones as $zone ) :
-					$zone_id  = $zone['id'];
-					$settings = pw_get_zone_security_settings(
-						$zone_id,
-						CLOUDFLARE_API_KEY,
-						CLOUDFLARE_EMAIL
-					);
-					?>
-				<tr>
-					<td class="zone_domain"><?php echo $zone['name']; ?></td>
-					<td class="<?php echo strtolower( $settings['bot_fight_mode'] ); ?>"><?php echo $settings['bot_fight_mode']; ?></td>
-					<td class="<?php echo strtolower( $settings['block_ai_bots'] ); ?>"><?php echo $settings['block_ai_bots']; ?></td>
-					<td class="<?php echo strtolower( $settings['ai_labyrinth'] ); ?>"><?php echo $settings['ai_labyrinth']; ?></td>
-					<td class="<?php echo strtolower( $settings['robots_management'] ); ?>"><?php echo $settings['robots_management']; ?></td>
-				</tr>
-				<?php endforeach; ?>
-			</tbody>
-		</table>
-		
 		<p>&nbsp;</p>
 		<p>&nbsp;</p>
 		<p><small>Cloudflare Rules Based on <a target="_blank" href="https://webagencyhero.com/cloudflare-waf-rules-v3/">Troy Glancy's superb Cloudflare WAF Rules v3</a></small></p>
 		<p><small>Standalone PHP version based on <a target="_blank" href="https://github.com/presswizards/cloudflare-waf-rules-wizard">Rob Marlbrough (Press Wizards) Cloudflare WAF Rules Wizard Plugin</a></small></p>
 	</div>
 </body>
-<?php
+</html>

@@ -162,7 +162,7 @@ function pw_get_zone_security_settings( $zone_id, $api_key, $api_email ) {
 	$response = pw_make_curl_request( $url, 'GET', $headers );
 
 	// Error checking
-	if ( ! isset( $response['success'] ) || $response['success'] !== true ) {
+	if ( ! isset( $response['success'] ) || true !== $response['success'] ) {
 		return $settings;
 	}
 
@@ -175,9 +175,9 @@ function pw_get_zone_security_settings( $zone_id, $api_key, $api_email ) {
 
 		// AI Bots Protection
 		if ( isset( $result['ai_bots_protection'] ) ) {
-			if ( $result['ai_bots_protection'] === 'block' ) {
+			if ( 'block' === $result['ai_bots_protection'] ) {
 				$settings['block_ai_bots'] = 'On';
-			} elseif ( $result['ai_bots_protection'] === 'log' ) {
+			} elseif ( 'log' === $result['ai_bots_protection'] ) {
 				$settings['block_ai_bots'] = 'Log Only';
 			} else {
 				$settings['block_ai_bots'] = 'Off';
@@ -186,7 +186,7 @@ function pw_get_zone_security_settings( $zone_id, $api_key, $api_email ) {
 
 		// AI Labyrinth (Crawler Protection)
 		if ( isset( $result['crawler_protection'] ) ) {
-			if ( $result['crawler_protection'] === 'enabled' ) {
+			if ( 'enabled' === $result['crawler_protection'] ) {
 				$settings['ai_labyrinth'] = 'On';
 			} else {
 				$settings['ai_labyrinth'] = 'Off';
