@@ -71,6 +71,26 @@ defined( 'CLOUDFLARE_API_KEY' ) || exit( 'No direct script access allowed' );
 	</tbody>
 </table>
 
+<div class="help">
+	<h2>Bot fight mode</h2>
+	<p>Detect and challenges bot traffic on your domain.
+	<br>
+	<a target="_blank" href="https://developers.cloudflare.com/bots/get-started/bot-fight-mode/">Developer Docs</a></p>
+	<h2>Block AI Bots</h2>
+	<p>Block artificial intelligence (AI) bots from scraping your websites and training large language models (LLM) on your content without your permission.
+	<br>
+	<a target="_blank" href="https://developers.cloudflare.com/bots/get-started/bot-management/#block-ai-bots">Developer Docs</a></p>
+	<h2>Manage bot traffic with robots.txt</h2>
+	<p>Use a Cloudflare managed robots.txt file, to allow verified AI bots for non-scraping purposes.<br>
+	<strong>Note: Current robots.txt will be bypassed.</strong></p>
+	<h2>AI Labyrinth</h2>
+	<p>Cloudflare modifies your pages by adding nofollow links that contain AI-generated content to disrupt bots ignoring crawling standards.</p>
+	<h2>Javascript Detections</h2>
+	<p>Use lightweight, invisible JavaScript code snippets that follow Cloudflare's privacy standards to improve Bot Management.</p>
+</div>
+
+
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 	const cells = document.querySelectorAll('.setting-cell');
