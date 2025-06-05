@@ -142,5 +142,5 @@ textarea {
 }
 
 .nav-menu li:not(.active) a:hover {
-	background: #f0f0f0;
+	background: #fff;
 }
