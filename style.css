@@ -68,3 +68,27 @@ textarea {
 	margin: 0.5em 0;
 	border: 1px solid #333333;
 }
+
+.security-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0 2em 0;
+}
+
+.security-table th, 
+.security-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.security-table th {
+    background-color: #f2f2f2;
+    font-weight: 700;
+}
+
+.security-table td.on {
+	font-weight: 700;
+	background: green;
+	color: #fff;
+}

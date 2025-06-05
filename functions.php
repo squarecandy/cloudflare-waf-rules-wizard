@@ -142,6 +142,64 @@ function pw_cloudflare_ruleset_manager_process_zones( $rules = array() ) {
 	}
 }
 
+// New function to get security feature status for a zone
+function pw_get_zone_security_settings( $zone_id, $api_key, $api_email ) {
+	$settings = array(
+		'bot_fight_mode'    => 'Unknown',
+		'block_ai_bots'     => 'Unknown',
+		'ai_labyrinth'      => 'Unknown',
+		'robots_management' => 'Unknown',
+	);
+
+	$headers = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+
+	// Bot Management API call
+	$url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/bot_management";
+	$response = pw_make_curl_request( $url, 'GET', $headers );
+
+	// Error checking
+	if ( ! isset( $response['success'] ) || $response['success'] !== true ) {
+		return $settings;
+	}
+
+	if ( isset( $response['result'] ) ) {
+		$result = $response['result'];
+
+		// Bot Fight Mode
+		$settings['bot_fight_mode'] = isset( $result['fight_mode'] ) && ! empty( $result['fight_mode'] )
+			? 'On' : 'Off';
+
+		// AI Bots Protection
+		if ( isset( $result['ai_bots_protection'] ) ) {
+			if ( $result['ai_bots_protection'] === 'block' ) {
+				$settings['block_ai_bots'] = 'On';
+			} elseif ( $result['ai_bots_protection'] === 'log' ) {
+				$settings['block_ai_bots'] = 'Log Only';
+			} else {
+				$settings['block_ai_bots'] = 'Off';
+			}
+		}
+
+		// AI Labyrinth (Crawler Protection)
+		if ( isset( $result['crawler_protection'] ) ) {
+			if ( $result['crawler_protection'] === 'enabled' ) {
+				$settings['ai_labyrinth'] = 'On';
+			} else {
+				$settings['ai_labyrinth'] = 'Off';
+			}
+		}
+
+		// Robots.txt Management
+		$settings['robots_management'] = isset( $result['is_robots_txt_managed'] ) && $result['is_robots_txt_managed']
+			? 'On' : 'Off';
+	}
+
+	return $settings;
+}
 
 if ( ! function_exists( 'pre_r' ) ) :
 	function pre_r( $array ) {

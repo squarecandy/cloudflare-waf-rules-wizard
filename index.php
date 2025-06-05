@@ -97,6 +97,40 @@ require_once 'config.php';
 			<input type="submit" class="button button-primary" name="pw_create_ruleset" value="Create/Overwrite All WAF Rules"><br><br>
 		</form>
 		<hr>
+
+		<!-- New section for Security Features Status Table -->
+		<h2>Cloudflare Security Features Status</h2>
+		<table class="security-table">
+			<thead>
+				<tr>
+					<th>Domain</th>
+					<th>Bot Fight Mode</th>
+					<th>Block AI Bots</th>
+					<th>AI Labyrinth</th>
+					<th>Override robots.txt</th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php
+				foreach ( $zones as $zone ) :
+					$zone_id  = $zone['id'];
+					$settings = pw_get_zone_security_settings(
+						$zone_id,
+						CLOUDFLARE_API_KEY,
+						CLOUDFLARE_EMAIL
+					);
+					?>
+				<tr>
+					<td class="zone_domain"><?php echo $zone['name']; ?></td>
+					<td class="<?php echo strtolower( $settings['bot_fight_mode'] ); ?>"><?php echo $settings['bot_fight_mode']; ?></td>
+					<td class="<?php echo strtolower( $settings['block_ai_bots'] ); ?>"><?php echo $settings['block_ai_bots']; ?></td>
+					<td class="<?php echo strtolower( $settings['ai_labyrinth'] ); ?>"><?php echo $settings['ai_labyrinth']; ?></td>
+					<td class="<?php echo strtolower( $settings['robots_management'] ); ?>"><?php echo $settings['robots_management']; ?></td>
+				</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+		
 		<p>&nbsp;</p>
 		<p>&nbsp;</p>
 		<p><small>Cloudflare Rules Based on <a target="_blank" href="https://webagencyhero.com/cloudflare-waf-rules-v3/">Troy Glancy's superb Cloudflare WAF Rules v3</a></small></p>
