@@ -145,10 +145,11 @@ function pw_cloudflare_ruleset_manager_process_zones( $rules = array() ) {
 // New function to get security feature status for a zone
 function pw_get_zone_security_settings( $zone_id, $api_key, $api_email ) {
 	$settings = array(
-		'bot_fight_mode'    => 'Unknown',
-		'block_ai_bots'     => 'Unknown',
-		'ai_labyrinth'      => 'Unknown',
-		'robots_management' => 'Unknown',
+		'bot_fight_mode'       => 'Unknown',
+		'block_ai_bots'        => 'Unknown',
+		'ai_labyrinth'         => 'Unknown',
+		'robots_management'    => 'Unknown',
+		'javascript_detection' => 'Unknown',
 	);
 
 	$headers = array(
@@ -196,6 +197,11 @@ function pw_get_zone_security_settings( $zone_id, $api_key, $api_email ) {
 		// Robots.txt Management
 		$settings['robots_management'] = isset( $result['is_robots_txt_managed'] ) && $result['is_robots_txt_managed']
 			? 'On' : 'Off';
+
+		// JavaScript Detection
+		if ( isset( $result['enable_js'] ) ) {
+			$settings['javascript_detection'] = ! empty( $result['enable_js'] ) ? 'On' : 'Off';
+		}
 	}
 
 	return $settings;

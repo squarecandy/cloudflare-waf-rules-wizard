@@ -4,7 +4,7 @@ body {
 	font-family: system-ui, sans-serif;
 	padding: 5vw;
 	margin: 0 auto;
-	max-width: 50em;
+	max-width: 58em;
 	font-size: 1.1em;
 	line-height: 1.5;
 }
@@ -143,4 +143,25 @@ textarea {
 
 .nav-menu li:not(.active) a:hover {
 	background: #fff;
+}
+
+.setting-cell {
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.setting-cell:hover {
+	opacity: 0.8;
+	box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.2);
+}
+
+.setting-cell.loading {
+	opacity: 0.6;
+	background-color: #e2e2e2;
+	color: #666;
+	font-style: italic;
+}
+
+.hidden {
+	display: none;
 }
