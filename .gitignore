@@ -11,3 +11,4 @@ phpcs.phar
 /sync-staging-*
 *.code-workspace
 config.php
+.vscode

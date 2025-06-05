@@ -140,6 +140,11 @@
 		</properties>
 	</rule>
 
+	<!-- Disable Yoda conditions check -->
+	<rule ref="WordPress.PHP.YodaConditions.NotYoda">
+		<severity>0</severity>
+	</rule>
+
 	<!-- Commented out code should not be committed.
 		 https://github.com/WordPress-Coding-Standards/WordPress-Coding-Standards/pull/1463 -->
 	<rule ref="Squiz.PHP.CommentedOutCode">
