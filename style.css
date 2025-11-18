@@ -4,7 +4,7 @@ body {
 	font-family: system-ui, sans-serif;
 	padding: 5vw;
 	margin: 0 auto;
-	max-width: 58em;
+	max-width: 68em;
 	font-size: 1.1em;
 	line-height: 1.5;
 }
@@ -216,12 +216,17 @@ textarea {
 
 .dns-records-table td.record-name {
 	font-weight: 500;
+	max-width: 250px;
+	word-break: break-word;
 }
 
 .dns-records-table td.record-content {
 	font-family: monospace;
 	font-size: 0.9em;
 	color: #666;
+	max-width: 300px;
+	word-break: break-all;
+	overflow-wrap: break-word;
 }
 
 .dns-records-table td.proxy-cell {
