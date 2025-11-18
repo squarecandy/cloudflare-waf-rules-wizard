@@ -12,3 +12,5 @@ phpcs.phar
 *.code-workspace
 config.php
 .vscode
+backups/
+backups/*

@@ -369,6 +369,400 @@ function pw_toggle_zone_proxy_status( $zone_id, $api_key, $api_email, $enable_pr
 	);
 }
 
+// Create a backup of all DNS proxy statuses
+function pw_create_proxy_backup( $account_ids, $api_key, $api_email ) {
+	$backup_data = array(
+		'timestamp' => time(),
+		'date'      => gmdate( 'Y-m-d H:i:s' ),
+		'zones'     => array(),
+	);
+
+	// Get all zones
+	$zones = pw_get_cloudflare_zones( $account_ids, $api_key, $api_email );
+
+	foreach ( $zones as $zone ) {
+		$zone_id     = $zone['id'];
+		$zone_name   = $zone['name'];
+		$dns_records = pw_get_zone_dns_records( $zone_id, $api_key, $api_email );
+
+		$zone_backup = array(
+			'zone_id'   => $zone_id,
+			'zone_name' => $zone_name,
+			'records'   => array(),
+		);
+
+		foreach ( $dns_records as $record ) {
+			$zone_backup['records'][] = array(
+				'id'      => $record['id'],
+				'type'    => $record['type'],
+				'name'    => $record['name'],
+				'content' => $record['content'],
+				'proxied' => $record['proxied'],
+			);
+		}
+
+		$backup_data['zones'][] = $zone_backup;
+	}
+
+	// Create backups directory if it doesn't exist
+	$backup_dir = __DIR__ . '/backups';
+	if ( ! is_dir( $backup_dir ) ) {
+		mkdir( $backup_dir, 0755, true );
+	}
+
+	// Create filename with timestamp
+	$filename = 'proxy_backup_' . gmdate( 'Y-m-d_H-i-s' ) . '.json';
+	$filepath = $backup_dir . '/' . $filename;
+
+	// Save backup
+	$json_data = json_encode( $backup_data, JSON_PRETTY_PRINT );
+	file_put_contents( $filepath, $json_data );
+
+	return array(
+		'success'  => true,
+		'filename' => $filename,
+		'filepath' => $filepath,
+		'count'    => count( $backup_data['zones'] ),
+	);
+}
+
+// Get list of available backups
+function pw_get_proxy_backups() {
+	$backup_dir = __DIR__ . '/backups';
+	$backups    = array();
+
+	if ( ! is_dir( $backup_dir ) ) {
+		return $backups;
+	}
+
+	$files = glob( $backup_dir . '/proxy_backup_*.json' );
+
+	foreach ( $files as $file ) {
+		$filename = basename( $file );
+		$data     = json_decode( file_get_contents( $file ), true );
+
+		if ( $data && isset( $data['timestamp'] ) ) {
+			$backups[] = array(
+				'filename'  => $filename,
+				'filepath'  => $file,
+				'timestamp' => $data['timestamp'],
+				'date'      => $data['date'],
+				'zones'     => isset( $data['zones'] ) ? count( $data['zones'] ) : 0,
+			);
+		}
+	}
+
+	// Sort by timestamp, newest first
+	usort(
+		$backups,
+		function ( $a, $b ) {
+			return $b['timestamp'] - $a['timestamp'];
+		}
+	);
+
+	return $backups;
+}
+
+// Get the most recent backup timestamp
+function pw_get_latest_backup_time() {
+	$backups = pw_get_proxy_backups();
+	if ( empty( $backups ) ) {
+		return 0;
+	}
+	return $backups[0]['timestamp'];
+}
+
+// Check if we can disable all (within 1 hour of last backup)
+function pw_can_disable_all() {
+	$latest_backup = pw_get_latest_backup_time();
+	if ( $latest_backup === 0 ) {
+		return false;
+	}
+
+	$one_hour_ago = time() - 3600;
+	return $latest_backup >= $one_hour_ago;
+}
+
+// Restore from a backup file
+function pw_restore_proxy_backup( $filename, $api_key, $api_email ) {
+	$backup_dir = __DIR__ . '/backups';
+	$filepath   = $backup_dir . '/' . basename( $filename );
+
+	if ( ! file_exists( $filepath ) ) {
+		return array(
+			'success' => false,
+			'message' => 'Backup file not found',
+		);
+	}
+
+	$backup_data = json_decode( file_get_contents( $filepath ), true );
+
+	if ( ! $backup_data || ! isset( $backup_data['zones'] ) ) {
+		return array(
+			'success' => false,
+			'message' => 'Invalid backup file',
+		);
+	}
+
+	$headers        = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+	$updated_count  = 0;
+	$error_count    = 0;
+	$skipped_count  = 0;
+
+	foreach ( $backup_data['zones'] as $zone_backup ) {
+		$zone_id = $zone_backup['zone_id'];
+
+		foreach ( $zone_backup['records'] as $record_backup ) {
+			$record_id      = $record_backup['id'];
+			$desired_status = $record_backup['proxied'];
+
+			// Get current status
+			$get_url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records/{$record_id}";
+			$get_response = pw_make_curl_request( $get_url, 'GET', $headers );
+
+			if ( ! isset( $get_response['success'] ) || ! $get_response['success'] ) {
+				$error_count++;
+				continue;
+			}
+
+			$current_record = $get_response['result'];
+
+			// Skip if already in desired state
+			if ( $current_record['proxied'] === $desired_status ) {
+				$skipped_count++;
+				continue;
+			}
+
+			// Update the record
+			$update_url  = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records/{$record_id}";
+			$update_data = array(
+				'type'    => $record_backup['type'],
+				'name'    => $record_backup['name'],
+				'content' => $record_backup['content'],
+				'proxied' => $desired_status,
+			);
+
+			if ( ! $desired_status ) {
+				$update_data['ttl'] = 1;
+			}
+
+			$update_response = pw_make_curl_request( $update_url, 'PATCH', $headers, $update_data );
+
+			if ( isset( $update_response['success'] ) && $update_response['success'] ) {
+				$updated_count++;
+			} else {
+				$error_count++;
+			}
+		}
+	}
+
+	return array(
+		'success' => true,
+		'updated' => $updated_count,
+		'skipped' => $skipped_count,
+		'errors'  => $error_count,
+	);
+}
+
+// Disable all proxy for all zones
+function pw_disable_all_proxy( $account_ids, $api_key, $api_email ) {
+	$zones = pw_get_cloudflare_zones( $account_ids, $api_key, $api_email );
+
+	$headers       = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+	$updated_count = 0;
+	$error_count   = 0;
+
+	foreach ( $zones as $zone ) {
+		$zone_id     = $zone['id'];
+		$dns_records = pw_get_zone_dns_records( $zone_id, $api_key, $api_email );
+
+		foreach ( $dns_records as $record ) {
+			// Only update if currently proxied
+			if ( $record['proxied'] ) {
+				$update_url  = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records/{$record['id']}";
+				$update_data = array(
+					'type'    => $record['type'],
+					'name'    => $record['name'],
+					'content' => $record['content'],
+					'proxied' => false,
+					'ttl'     => 1,
+				);
+
+				$update_response = pw_make_curl_request( $update_url, 'PATCH', $headers, $update_data );
+
+				if ( isset( $update_response['success'] ) && $update_response['success'] ) {
+					$updated_count++;
+				} else {
+					$error_count++;
+				}
+			}
+		}
+	}
+
+	return array(
+		'success' => true,
+		'updated' => $updated_count,
+		'errors'  => $error_count,
+	);
+}
+
+// Disable all proxy for a specific zone
+function pw_disable_zone_proxy( $zone_id, $api_key, $api_email ) {
+	$dns_records = pw_get_zone_dns_records( $zone_id, $api_key, $api_email );
+
+	$headers       = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+	$updated_count = 0;
+	$error_count   = 0;
+
+	foreach ( $dns_records as $record ) {
+		// Only update if currently proxied
+		if ( $record['proxied'] ) {
+			$update_url  = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records/{$record['id']}";
+			$update_data = array(
+				'type'    => $record['type'],
+				'name'    => $record['name'],
+				'content' => $record['content'],
+				'proxied' => false,
+				'ttl'     => 1,
+			);
+
+			$update_response = pw_make_curl_request( $update_url, 'PATCH', $headers, $update_data );
+
+			if ( isset( $update_response['success'] ) && $update_response['success'] ) {
+				$updated_count++;
+			} else {
+				$error_count++;
+			}
+		}
+	}
+
+	return array(
+		'success' => true,
+		'updated' => $updated_count,
+		'errors'  => $error_count,
+	);
+}
+
+// Restore proxy settings for a specific zone from backup
+function pw_restore_zone_from_backup( $zone_id, $filename, $api_key, $api_email ) {
+	$backup_dir = __DIR__ . '/backups';
+	$filepath   = $backup_dir . '/' . basename( $filename );
+
+	if ( ! file_exists( $filepath ) ) {
+		return array(
+			'success' => false,
+			'message' => 'Backup file not found',
+		);
+	}
+
+	$backup_data = json_decode( file_get_contents( $filepath ), true );
+
+	if ( ! $backup_data || ! isset( $backup_data['zones'] ) ) {
+		return array(
+			'success' => false,
+			'message' => 'Invalid backup file',
+		);
+	}
+
+	// Find the zone in the backup
+	$zone_backup = null;
+	foreach ( $backup_data['zones'] as $zone ) {
+		if ( $zone['zone_id'] === $zone_id ) {
+			$zone_backup = $zone;
+			break;
+		}
+	}
+
+	if ( ! $zone_backup ) {
+		return array(
+			'success' => false,
+			'message' => 'Zone not found in backup',
+		);
+	}
+
+	$headers       = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+	$updated_count = 0;
+	$error_count   = 0;
+	$skipped_count = 0;
+	$records_state = array(); // Track final state of all records
+
+	foreach ( $zone_backup['records'] as $record_backup ) {
+		$record_id      = $record_backup['id'];
+		$desired_status = $record_backup['proxied'];
+
+		// Get current status
+		$get_url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records/{$record_id}";
+		$get_response = pw_make_curl_request( $get_url, 'GET', $headers );
+
+		if ( ! isset( $get_response['success'] ) || ! $get_response['success'] ) {
+			$error_count++;
+			continue;
+		}
+
+		$current_record = $get_response['result'];
+
+		// Skip if already in desired state
+		if ( $current_record['proxied'] === $desired_status ) {
+			$skipped_count++;
+			// Still add to records_state for UI update
+			$records_state[] = array(
+				'id'      => $record_id,
+				'proxied' => $desired_status,
+			);
+			continue;
+		}
+
+		// Update the record
+		$update_url  = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records/{$record_id}";
+		$update_data = array(
+			'type'    => $record_backup['type'],
+			'name'    => $record_backup['name'],
+			'content' => $record_backup['content'],
+			'proxied' => $desired_status,
+		);
+
+		if ( ! $desired_status ) {
+			$update_data['ttl'] = 1;
+		}
+
+		$update_response = pw_make_curl_request( $update_url, 'PATCH', $headers, $update_data );
+
+		if ( isset( $update_response['success'] ) && $update_response['success'] ) {
+			$updated_count++;
+			$records_state[] = array(
+				'id'      => $record_id,
+				'proxied' => $desired_status,
+			);
+		} else {
+			$error_count++;
+		}
+	}
+
+	return array(
+		'success' => true,
+		'updated' => $updated_count,
+		'skipped' => $skipped_count,
+		'errors'  => $error_count,
+		'records' => $records_state,
+	);
+}
+
 if ( ! function_exists( 'pre_r' ) ) :
 	function pre_r( $array ) {
 		print '<pre class="squarecandy-pre-r">';

@@ -31,7 +31,196 @@ if (
 }
 
 // Check for required parameters
-if ( empty( $_POST['zone_id'] ) || empty( $_POST['setting'] ) || ! isset( $_POST['value'] ) ) {
+if ( empty( $_POST['setting'] ) ) {
+	echo json_encode(
+		array(
+			'success' => false,
+			'message' => 'Missing required parameters',
+		)
+	);
+	exit;
+}
+
+$setting = $_POST['setting'];
+
+// Handle backup creation
+if ( $setting === 'create_backup' ) {
+	$result = pw_create_proxy_backup(
+		CLOUDFLARE_ACCOUNT_IDS,
+		CLOUDFLARE_API_KEY,
+		CLOUDFLARE_EMAIL
+	);
+
+	if ( $result['success'] ) {
+		$result['message'] = "Backup created successfully: {$result['filename']} ({$result['count']} zones)";
+	} else {
+		$result['message'] = 'Failed to create backup';
+	}
+
+	echo json_encode( $result );
+	exit;
+}
+
+// Handle getting backup list
+if ( $setting === 'get_backups' ) {
+	$backups            = pw_get_proxy_backups();
+	$can_disable_all    = pw_can_disable_all();
+	$latest_backup_time = pw_get_latest_backup_time();
+
+	echo json_encode(
+		array(
+			'success'            => true,
+			'backups'            => $backups,
+			'can_disable_all'    => $can_disable_all,
+			'latest_backup_time' => $latest_backup_time,
+		)
+	);
+	exit;
+}
+
+// Handle restore from backup
+if ( $setting === 'restore_backup' ) {
+	if ( empty( $_POST['filename'] ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Missing backup filename',
+			)
+		);
+		exit;
+	}
+
+	$result = pw_restore_proxy_backup(
+		$_POST['filename'],
+		CLOUDFLARE_API_KEY,
+		CLOUDFLARE_EMAIL
+	);
+
+	if ( $result['success'] ) {
+		$message = "Restored {$result['updated']} record(s)";
+		if ( $result['skipped'] > 0 ) {
+			$message .= ", {$result['skipped']} already correct";
+		}
+		if ( $result['errors'] > 0 ) {
+			$message .= ", {$result['errors']} error(s)";
+		}
+		$result['message'] = $message;
+	}
+
+	echo json_encode( $result );
+	exit;
+}
+
+// Handle disable all
+if ( $setting === 'disable_all' ) {
+	// Check if we can disable all
+	if ( ! pw_can_disable_all() ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Cannot disable all: A backup must be created within the last hour',
+			)
+		);
+		exit;
+	}
+
+	$result = pw_disable_all_proxy(
+		CLOUDFLARE_ACCOUNT_IDS,
+		CLOUDFLARE_API_KEY,
+		CLOUDFLARE_EMAIL
+	);
+
+	if ( $result['success'] ) {
+		$message = "Disabled proxy for {$result['updated']} record(s)";
+		if ( $result['errors'] > 0 ) {
+			$message .= ", {$result['errors']} error(s)";
+		}
+		$result['message'] = $message;
+	}
+
+	echo json_encode( $result );
+	exit;
+}
+
+// Handle disable all for a specific zone
+if ( $setting === 'disable_zone' ) {
+	if ( empty( $_POST['zone_id'] ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Missing zone ID',
+			)
+		);
+		exit;
+	}
+
+	// Check if we can disable (backup within 1 hour)
+	if ( ! pw_can_disable_all() ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Cannot disable: A backup must be created within the last hour',
+			)
+		);
+		exit;
+	}
+
+	$zone_id = $_POST['zone_id'];
+	$result  = pw_disable_zone_proxy(
+		$zone_id,
+		CLOUDFLARE_API_KEY,
+		CLOUDFLARE_EMAIL
+	);
+
+	if ( $result['success'] ) {
+		$message = "Disabled proxy for {$result['updated']} record(s)";
+		if ( $result['errors'] > 0 ) {
+			$message .= ", {$result['errors']} error(s)";
+		}
+		$result['message'] = $message;
+	}
+
+	echo json_encode( $result );
+	exit;
+}
+
+// Handle restore for a specific zone
+if ( $setting === 'restore_zone' ) {
+	if ( empty( $_POST['zone_id'] ) || empty( $_POST['filename'] ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Missing zone ID or backup filename',
+			)
+		);
+		exit;
+	}
+
+	$zone_id = $_POST['zone_id'];
+	$result  = pw_restore_zone_from_backup(
+		$zone_id,
+		$_POST['filename'],
+		CLOUDFLARE_API_KEY,
+		CLOUDFLARE_EMAIL
+	);
+
+	if ( $result['success'] ) {
+		$message = "Restored {$result['updated']} record(s)";
+		if ( $result['skipped'] > 0 ) {
+			$message .= ", {$result['skipped']} already correct";
+		}
+		if ( $result['errors'] > 0 ) {
+			$message .= ", {$result['errors']} error(s)";
+		}
+		$result['message'] = $message;
+	}
+
+	echo json_encode( $result );
+	exit;
+}
+
+// For other settings, require zone_id and value
+if ( empty( $_POST['zone_id'] ) || ! isset( $_POST['value'] ) ) {
 	echo json_encode(
 		array(
 			'success' => false,
@@ -42,7 +231,6 @@ if ( empty( $_POST['zone_id'] ) || empty( $_POST['setting'] ) || ! isset( $_POST
 }
 
 $zone_id   = $_POST['zone_id'];
-$setting   = $_POST['setting'];
 $new_value = $_POST['value'] === 'true';
 
 // Prepare API request headers

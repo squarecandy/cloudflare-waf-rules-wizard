@@ -59,6 +59,39 @@ button.button-secondary {
 	color: #333333;
 	border: 2px solid #333333;
 	font-weight: 400;
+	font-size: 1em;
+}
+
+button.button-primary {
+	background: #2196F3;
+	color: #ffffff;
+	border: none;
+	font-size: 1em;
+}
+
+button.button-primary:hover:not(:disabled) {
+	background: #1976D2;
+}
+
+button.button-danger {
+	background: #F44336;
+	color: #ffffff;
+	border: none;
+	font-size: 1em;
+}
+
+button.button-danger:hover:not(:disabled) {
+	background: #D32F2F;
+}
+
+button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.btn-icon {
+	font-style: normal;
+	margin-right: 0.3em;
 }
 
 textarea {
@@ -190,6 +223,78 @@ textarea {
 	display: none;
 }
 
+/* Zone Section */
+.zone-section {
+	margin: 2em 0 3em 0;
+	padding: 1.5em;
+	background: #fff;
+	border: 2px solid #ddd;
+	border-radius: 8px;
+}
+
+.zone-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	margin-bottom: 1em;
+	padding-bottom: 1em;
+	border-bottom: 2px solid #f0f0f0;
+	flex-wrap: wrap;
+	gap: 1em;
+}
+
+.zone-info {
+	flex: 1;
+	min-width: 250px;
+}
+
+.zone-info h3 {
+	margin: 0 0 0.5em 0;
+}
+
+.zone-controls {
+	display: flex;
+	gap: 0.5em;
+	flex-wrap: wrap;
+}
+
+.button-danger-small,
+.button-secondary-small {
+	padding: 0.5em 1em;
+	font-size: 0.9em;
+	font-weight: 600;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.button-danger-small {
+	background: #F44336;
+	color: #ffffff;
+	border: none;
+}
+
+.button-danger-small:hover:not(:disabled) {
+	background: #D32F2F;
+}
+
+.button-secondary-small {
+	background: #e2e2e2;
+	color: #333333;
+	border: 2px solid #333333;
+}
+
+.button-secondary-small:hover:not(:disabled) {
+	background: #d0d0d0;
+}
+
+.button-danger-small:disabled,
+.button-secondary-small:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 /* DNS Records Table */
 .dns-records-table {
 	width: 100%;
@@ -308,5 +413,140 @@ textarea {
 	padding: 2px 6px;
 	border-radius: 3px;
 	font-size: 0.95em;
+}
+
+/* Backup Controls */
+.backup-controls {
+	display: flex;
+	gap: 1em;
+	margin: 2em 0;
+	padding: 1em;
+	background: #f9f9f9;
+	border: 2px solid #ddd;
+	border-radius: 8px;
+	flex-wrap: wrap;
+}
+
+.backup-controls button {
+	flex: 1;
+	min-width: 180px;
+	padding: 0.75em 1.5em;
+	font-size: 1em;
+	white-space: nowrap;
+}
+
+/* Modal */
+.modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.modal.hidden {
+	display: none;
+}
+
+.modal-content {
+	background: #fff;
+	border-radius: 8px;
+	max-width: 600px;
+	width: 90%;
+	max-height: 80vh;
+	overflow: auto;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1em 1.5em;
+	border-bottom: 2px solid #ddd;
+}
+
+.modal-header h3 {
+	margin: 0;
+}
+
+.modal-close {
+	background: none;
+	border: none;
+	font-size: 2em;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0;
+	width: 40px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #666;
+}
+
+.modal-close:hover {
+	color: #333;
+	background: #f5f5f5;
+	border-radius: 4px;
+}
+
+.modal-body {
+	padding: 1.5em;
+}
+
+/* Backup List */
+.backup-list {
+	margin-top: 1em;
+}
+
+.backup-items {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5em;
+}
+
+.backup-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1em;
+	background: #f9f9f9;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+}
+
+.backup-info {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25em;
+}
+
+.backup-zones {
+	font-size: 0.9em;
+	color: #666;
+}
+
+.backup-item button {
+	font-size: 0.9em;
+	padding: 0.5em 1em;
+}
+
+.loading-message,
+.no-backups,
+.error-message {
+	text-align: center;
+	padding: 2em;
+	color: #666;
+	font-style: italic;
+}
+
+.error-message {
+	color: #F44336;
 }
 
