@@ -61,6 +61,110 @@ $result = array(
 // Define the base URL for all settings (same for all cases)
 $url = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/bot_management";
 
+// Handle individual DNS record proxy toggle
+if ( $setting === 'dns_record_proxy' ) {
+	if ( empty( $_POST['record_id'] ) || empty( $_POST['record_type'] ) || empty( $_POST['record_name'] ) || empty( $_POST['record_content'] ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Missing required DNS record parameters',
+			)
+		);
+		exit;
+	}
+
+	$record_id      = $_POST['record_id'];
+	$record_type    = $_POST['record_type'];
+	$record_name    = $_POST['record_name'];
+	$record_content = $_POST['record_content'];
+	$enable_proxy   = ( $_POST['value'] === 'true' );
+
+	$update_url  = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records/{$record_id}";
+	$update_data = array(
+		'type'    => $record_type,
+		'name'    => $record_name,
+		'content' => $record_content,
+		'proxied' => $enable_proxy,
+	);
+
+	// Add TTL if not proxied (required when proxied is false)
+	if ( ! $enable_proxy ) {
+		$update_data['ttl'] = 1; // 1 = automatic
+	}
+
+	$response = pw_make_curl_request( $update_url, 'PATCH', $headers, $update_data );
+
+	if ( isset( $response['success'] ) && $response['success'] === true ) {
+		$result = array(
+			'success' => true,
+			'message' => 'Proxy ' . ( $enable_proxy ? 'enabled' : 'disabled' ) . ' for ' . $record_name,
+		);
+	} else {
+		$error_message = isset( $response['errors'][0]['message'] ) ? $response['errors'][0]['message'] : 'Unknown error';
+		$result        = array(
+			'success' => false,
+			'message' => 'API Error: ' . $error_message,
+		);
+	}
+
+	echo json_encode( $result );
+	exit;
+}
+
+// Handle proxy status separately (bulk zone toggle - deprecated, kept for backwards compatibility)
+if ( $setting === 'proxy_status' ) {
+	$enable_proxy = ( $_POST['value'] === 'on' );
+
+	$proxy_result = pw_toggle_zone_proxy_status(
+		$zone_id,
+		CLOUDFLARE_API_KEY,
+		CLOUDFLARE_EMAIL,
+		$enable_proxy
+	);
+
+	if ( $proxy_result['success'] ) {
+		// Get the updated status after toggling
+		$new_status = pw_get_zone_proxy_status(
+			$zone_id,
+			CLOUDFLARE_API_KEY,
+			CLOUDFLARE_EMAIL
+		);
+
+		// Determine CSS class
+		$status_class = 'unknown';
+		if ( strpos( $new_status, 'All On' ) !== false ) {
+			$status_class = 'on';
+		} elseif ( strpos( $new_status, 'All Off' ) !== false ) {
+			$status_class = 'off';
+		} elseif ( strpos( $new_status, 'Mixed' ) !== false ) {
+			$status_class = 'mixed';
+		}
+
+		$message = 'Proxy status updated';
+		if ( $proxy_result['updated'] > 0 ) {
+			$message .= ": {$proxy_result['updated']} record(s) updated";
+		}
+		if ( $proxy_result['errors'] > 0 ) {
+			$message .= ", {$proxy_result['errors']} error(s)";
+		}
+
+		$result = array(
+			'success'      => true,
+			'message'      => $message,
+			'new_value'    => $new_status,
+			'status_class' => $status_class,
+		);
+	} else {
+		$result = array(
+			'success' => false,
+			'message' => $proxy_result['message'] ?? 'Failed to update proxy status',
+		);
+	}
+
+	echo json_encode( $result );
+	exit;
+}
+
 // Define setting mappings
 $settings_map = array(
 	'bot_fight_mode'       => array(

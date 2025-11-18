@@ -207,6 +207,168 @@ function pw_get_zone_security_settings( $zone_id, $api_key, $api_email ) {
 	return $settings;
 }
 
+// Get DNS proxy status for a zone (checks if any DNS records have proxy enabled)
+function pw_get_zone_proxy_status( $zone_id, $api_key, $api_email ) {
+	$headers = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+
+	$per_page      = 100;
+	$page          = 1;
+	$proxied_count = 0;
+	$total_count   = 0;
+
+	do {
+		$url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records?per_page={$per_page}&page={$page}";
+		$response = pw_make_curl_request( $url, 'GET', $headers );
+
+		if ( ! isset( $response['success'] ) || true !== $response['success'] ) {
+			return 'Unknown';
+		}
+
+		if ( isset( $response['result'] ) && is_array( $response['result'] ) ) {
+			foreach ( $response['result'] as $record ) {
+				// Only count proxiable record types
+				if ( in_array( $record['type'], array( 'A', 'AAAA', 'CNAME' ), true ) ) {
+					$total_count++;
+					if ( isset( $record['proxied'] ) && $record['proxied'] ) {
+						$proxied_count++;
+					}
+				}
+			}
+		}
+
+		$total_pages = isset( $response['result_info']['total_pages'] ) ? (int) $response['result_info']['total_pages'] : 1;
+		$page++;
+
+	} while ( $page <= $total_pages );
+
+	if ( 0 === $total_count ) {
+		return 'No Records';
+	}
+
+	if ( $proxied_count === $total_count ) {
+		return 'All On';
+	} elseif ( $proxied_count > 0 ) {
+		return "Mixed ({$proxied_count}/{$total_count})";
+	} else {
+		return 'All Off';
+	}
+}
+
+// Get all proxiable DNS records (A, AAAA, CNAME) for a zone
+function pw_get_zone_dns_records( $zone_id, $api_key, $api_email ) {
+	$headers = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+
+	$per_page    = 100;
+	$page        = 1;
+	$all_records = array();
+
+	do {
+		$url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records?per_page={$per_page}&page={$page}";
+		$response = pw_make_curl_request( $url, 'GET', $headers );
+
+		if ( ! isset( $response['success'] ) || true !== $response['success'] ) {
+			return array();
+		}
+
+		if ( isset( $response['result'] ) && is_array( $response['result'] ) ) {
+			foreach ( $response['result'] as $record ) {
+				// Only include proxiable record types
+				if ( in_array( $record['type'], array( 'A', 'AAAA', 'CNAME' ), true ) ) {
+					$all_records[] = array(
+						'id'      => $record['id'],
+						'type'    => $record['type'],
+						'name'    => $record['name'],
+						'content' => $record['content'],
+						'proxied' => isset( $record['proxied'] ) ? $record['proxied'] : false,
+						'ttl'     => isset( $record['ttl'] ) ? $record['ttl'] : 1,
+					);
+				}
+			}
+		}
+
+		$total_pages = isset( $response['result_info']['total_pages'] ) ? (int) $response['result_info']['total_pages'] : 1;
+		$page++;
+
+	} while ( $page <= $total_pages );
+
+	return $all_records;
+}
+
+// Toggle proxy status for all DNS records in a zone
+function pw_toggle_zone_proxy_status( $zone_id, $api_key, $api_email, $enable_proxy ) {
+	$headers = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+
+	$per_page       = 100;
+	$page           = 1;
+	$updated_count  = 0;
+	$error_count    = 0;
+
+	do {
+		$url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records?per_page={$per_page}&page={$page}";
+		$response = pw_make_curl_request( $url, 'GET', $headers );
+
+		if ( ! isset( $response['success'] ) || true !== $response['success'] ) {
+			return array(
+				'success' => false,
+				'message' => 'Failed to fetch DNS records',
+			);
+		}
+
+		if ( isset( $response['result'] ) && is_array( $response['result'] ) ) {
+			foreach ( $response['result'] as $record ) {
+				// Only update proxiable record types
+				if ( in_array( $record['type'], array( 'A', 'AAAA', 'CNAME' ), true ) ) {
+					// Only update if the current state is different
+					if ( $record['proxied'] !== $enable_proxy ) {
+						$update_url  = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records/{$record['id']}";
+						$update_data = array(
+							'type'    => $record['type'],
+							'name'    => $record['name'],
+							'content' => $record['content'],
+							'proxied' => $enable_proxy,
+						);
+
+						// Add TTL if not proxied
+						if ( ! $enable_proxy && isset( $record['ttl'] ) ) {
+							$update_data['ttl'] = $record['ttl'];
+						}
+
+						$update_response = pw_make_curl_request( $update_url, 'PATCH', $headers, $update_data );
+
+						if ( isset( $update_response['success'] ) && $update_response['success'] ) {
+							$updated_count++;
+						} else {
+							$error_count++;
+						}
+					}
+				}
+			}
+		}
+
+		$total_pages = isset( $response['result_info']['total_pages'] ) ? (int) $response['result_info']['total_pages'] : 1;
+		$page++;
+
+	} while ( $page <= $total_pages );
+
+	return array(
+		'success' => true,
+		'updated' => $updated_count,
+		'errors'  => $error_count,
+	);
+}
+
 if ( ! function_exists( 'pre_r' ) ) :
 	function pre_r( $array ) {
 		print '<pre class="squarecandy-pre-r">';

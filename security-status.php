@@ -17,6 +17,7 @@ defined( 'CLOUDFLARE_API_KEY' ) || exit( 'No direct script access allowed' );
 	<thead>
 		<tr>
 			<th>Domain</th>
+			<th>Zone ID</th>
 			<th>Bot Fight Mode</th>
 			<th>Block AI Bots</th>
 			<th>AI Labyrinth</th>
@@ -41,27 +42,30 @@ defined( 'CLOUDFLARE_API_KEY' ) || exit( 'No direct script access allowed' );
 			?>
 		<tr data-zone-id="<?php echo $zone_id; ?>">
 			<td class="zone_domain"><?php echo $zone['name']; ?></td>
-			<td class="setting-cell <?php echo strtolower( $settings['bot_fight_mode'] ); ?>" 
+			<td class="zone_id">
+				<code><?php echo $zone_id; ?></code>
+			</td>
+			<td class="setting-cell <?php echo strtolower( $settings['bot_fight_mode'] ); ?>"
 				data-setting="bot_fight_mode"
 				data-value="<?php echo $settings['bot_fight_mode'] === 'On' ? 'true' : 'false'; ?>">
 				<?php echo $settings['bot_fight_mode']; ?>
 			</td>
-			<td class="setting-cell <?php echo strtolower( $settings['block_ai_bots'] ); ?>" 
-				data-setting="block_ai_bots" 
+			<td class="setting-cell <?php echo strtolower( $settings['block_ai_bots'] ); ?>"
+				data-setting="block_ai_bots"
 				data-value="<?php echo $settings['block_ai_bots'] === 'On' ? 'true' : 'false'; ?>">
 				<?php echo $settings['block_ai_bots']; ?>
 			</td>
-			<td class="setting-cell <?php echo strtolower( $settings['ai_labyrinth'] ); ?>" 
+			<td class="setting-cell <?php echo strtolower( $settings['ai_labyrinth'] ); ?>"
 				data-setting="ai_labyrinth"
 				data-value="<?php echo $settings['ai_labyrinth'] === 'On' ? 'true' : 'false'; ?>">
 				<?php echo $settings['ai_labyrinth']; ?>
 			</td>
-			<td class="setting-cell <?php echo strtolower( $settings['javascript_detection'] ); ?>" 
+			<td class="setting-cell <?php echo strtolower( $settings['javascript_detection'] ); ?>"
 				data-setting="javascript_detection"
 				data-value="<?php echo $settings['javascript_detection'] === 'On' ? 'true' : 'false'; ?>">
 				<?php echo $settings['javascript_detection']; ?>
 			</td>
-			<td class="setting-cell <?php echo strtolower( $settings['robots_management'] ); ?>" 
+			<td class="setting-cell <?php echo strtolower( $settings['robots_management'] ); ?>"
 				data-setting="robots_management"
 				data-value="<?php echo $settings['robots_management'] === 'On' ? 'true' : 'false'; ?>">
 				<?php echo $settings['robots_management']; ?>
@@ -103,9 +107,10 @@ document.addEventListener('DOMContentLoaded', function() {
 			const currentValue = this.dataset.value;
 			const newValue = currentValue === 'true' ? 'false' : 'true';
 			const zoneId = this.parentNode.dataset.zoneId;
+
 			// Show loading state
 			this.classList.add('loading');
-			this.textContent = 'Updating...';     
+			this.textContent = 'Updating...';
 			// Prepare form data
 			const formData = new FormData();
 			formData.append('zone_id', zoneId);
