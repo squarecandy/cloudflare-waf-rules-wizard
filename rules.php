@@ -425,7 +425,7 @@ $rulesets = array(
 	),
 	'squarecandy_rules_ecommerce' => array(
 		'description' => 'Square Candy FREE Ecommerce Rules 2026-03',
-		'rules'       => $squarecandy_rules_free,
+		'rules'       => $squarecandy_rules_free_ecommmerce,
 	),
 	'squarecandy_rules_pro'       => array(
 		'description' => 'Square Candy PRO Rules 2026-03',
