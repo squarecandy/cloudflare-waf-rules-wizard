@@ -293,7 +293,7 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 											$is_identical = ( $existing_action === $new_action && $existing_expr === $new_expr );
 											$status_class = $is_identical ? 'matching' : 'changing';
 											$status_icon = $is_identical ? '✓' : '↻';
-											$rule_row_id = 'rule-' . md5( $desc );
+											$rule_row_id = 'rule-' . md5( $zone_data['id'] . '-' . $desc );
 											?>
 											<tr class="rule-<?php echo $status_class; ?>">
 												<td class="rule-status">
@@ -304,7 +304,7 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 												<td class="rule-description">
 													<strong><?php echo htmlspecialchars( $desc ); ?></strong>
 													<?php if ( ! $is_identical ) : ?>
-														<button type="button" class="diff-toggle" onclick="toggleDiff('<?php echo $rule_row_id; ?>')">
+														<button type="button" class="diff-toggle" onclick="toggleDiff(this, '<?php echo $rule_row_id; ?>')">
 															<span class="toggle-icon">▶</span><span class="toggle-text"> Show Diff</span>
 														</button>
 													<?php endif; ?>
@@ -405,9 +405,8 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 				</div>
 			</div>
 			<script>
-			function toggleDiff(ruleId) {
+				function toggleDiff(toggleBtn, ruleId) {
 				const diffRow = document.getElementById(ruleId);
-				const toggleBtn = event.target.closest('.diff-toggle');
 				const icon = toggleBtn.querySelector('.toggle-icon');
 				const text = toggleBtn.querySelector('.toggle-text');
 
