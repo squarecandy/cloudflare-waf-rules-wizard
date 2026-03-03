@@ -20,6 +20,46 @@ function pw_make_curl_request( $url, $method, $headers, $data = null ) {
 	return json_decode( $response, true );
 }
 
+// Get existing WAF rules for a zone
+function pw_get_existing_waf_rules( $zone_id, $api_key, $api_email ) {
+	$headers = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+
+	// Get ruleset ID
+	$url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets";
+	$response = pw_make_curl_request( $url, 'GET', $headers );
+
+	if ( empty( $response['result'] ) ) {
+		return array();
+	}
+
+	$ruleset_id = null;
+	foreach ( $response['result'] as $ruleset ) {
+		if ( 'zone' === $ruleset['kind'] && 'http_request_firewall_custom' === $ruleset['phase'] ) {
+			$ruleset_id = $ruleset['id'];
+			break;
+		}
+	}
+
+	if ( ! $ruleset_id ) {
+		return array(); // No custom WAF rules exist
+	}
+
+	// Get the rules from the ruleset
+	$rules_url = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets/{$ruleset_id}";
+	$rules_response = pw_make_curl_request( $rules_url, 'GET', $headers );
+
+	if ( isset( $rules_response['result']['rules'] ) ) {
+		return $rules_response['result']['rules'];
+	}
+
+	return array();
+}
+
+
 // Get the list of all zones based on the account ID
 function pw_get_cloudflare_zones( $account_ids, $api_key, $api_email ) {
 	$all_zones = array(); // Array to hold all zones
