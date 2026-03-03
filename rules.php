@@ -173,6 +173,7 @@ $web_hosts = array(
 	'9009',
 	'11878',
 	'49505',
+	'401116', // Nybula LLC https://threatfox.abuse.ch/browse/tag/Nybula%20LLC/
 );
 $web_hosts = implode( ' ', $web_hosts );
 
@@ -267,7 +268,24 @@ $tor = '(ip.src.country eq "T1")';
 // Block Drupal patterns
 $drupal = '(starts_with(http.request.uri.path, "/sites/default/files/")) or (starts_with(http.request.uri.path, "/sites/all/")) or (starts_with(http.request.uri.path, "/node")) or (http.request.full_uri contains "civicrm")';
 // Block Sensitive WP Paths
-$wp_paths = '(http.request.uri.path contains "xmlrpc") or (http.request.uri.path contains "xmrlpc") or (http.request.uri.path contains "wlwmanifest") or (http.request.uri.path contains "wp-config") or (http.request.uri.path contains "passwd")';
+$wp_path_strings = array(
+	'xmlrpc',
+	'xmrlpc', // common misspelling by bots
+	'wlwmanifest',
+	'wp-config',
+	'passwd',
+	'/.env',
+	'network.php',
+	'wp-ajf.php',
+);
+$wp_paths = array_map(
+	function ( $path ) {
+		return '(http.request.uri.path contains "' . $path . '")';
+	},
+	$wp_path_strings
+);
+$wp_paths = implode( ' or ', $wp_paths );
+
 // Block General AI Crawlers and Assistant Bots
 $ai_crawlers = '(cf.verified_bot_category in {"AI Crawler" "Other" "AI Assistant"} and not http.user_agent contains "archive.org")';
 // Block OpenAI (when they actually reveal their user agent!)
