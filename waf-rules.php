@@ -13,8 +13,9 @@ function pw_split_expr_into_clauses( $text ) {
 	$parts = preg_split( '/\s+(and|or)\s+/i', $text, -1, PREG_SPLIT_DELIM_CAPTURE );
 	// preg_split with PREG_SPLIT_DELIM_CAPTURE returns:
 	// [ clause0, connector1, clause1, connector2, clause2, ... ]
-	$clauses = array();
-	for ( $i = 0; $i < count( $parts ); $i++ ) {
+	$clauses     = array();
+	$parts_count = count( $parts );
+	for ( $i = 0; $i < $parts_count; $i++ ) {
 		if ( 0 === $i ) {
 			$clauses[] = trim( $parts[ $i ] );
 		} elseif ( 1 === $i % 2 ) {
@@ -50,14 +51,32 @@ function pw_lcs_diff( $old_arr, $new_arr ) {
 	$j    = $n;
 	while ( $i > 0 || $j > 0 ) {
 		if ( $i > 0 && $j > 0 && $old_arr[ $i - 1 ] === $new_arr[ $j - 1 ] ) {
-			array_unshift( $diff, array( 'type' => 'same', 'line' => $old_arr[ $i - 1 ] ) );
+			array_unshift(
+				$diff,
+				array(
+					'type' => 'same',
+					'line' => $old_arr[ $i - 1 ],
+				)
+			);
 			$i--;
 			$j--;
 		} elseif ( $j > 0 && ( 0 === $i || $dp[ $i ][ $j - 1 ] >= $dp[ $i - 1 ][ $j ] ) ) {
-			array_unshift( $diff, array( 'type' => 'added', 'line' => $new_arr[ $j - 1 ] ) );
+			array_unshift(
+				$diff,
+				array(
+					'type' => 'added',
+					'line' => $new_arr[ $j - 1 ],
+				)
+			);
 			$j--;
 		} else {
-			array_unshift( $diff, array( 'type' => 'removed', 'line' => $old_arr[ $i - 1 ] ) );
+			array_unshift(
+				$diff,
+				array(
+					'type' => 'removed',
+					'line' => $old_arr[ $i - 1 ],
+				)
+			);
 			$i--;
 		}
 	}
@@ -141,11 +160,11 @@ if ( isset( $_POST['pw_confirm_overwrite'] ) && isset( $_POST['pw_ruleset'] ) &&
 if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! empty( $_POST['pw_ruleset'] ) && isset( $_POST['pw_zone_ids'] ) ) {
 	$ruleset_name = $_POST['pw_ruleset'];
 	$ruleset_name = preg_replace( '/[^a-z0-9_]/', '_', $ruleset_name );
-	$zone_ids = $_POST['pw_zone_ids'];
+	$zone_ids     = $_POST['pw_zone_ids'];
 
 	if ( isset( $rulesets[ $ruleset_name ] ) ) {
 		$new_rules = $rulesets[ $ruleset_name ]['rules'];
-		$zones = pw_get_cloudflare_zones(
+		$zones     = pw_get_cloudflare_zones(
 			CLOUDFLARE_ACCOUNT_IDS,
 			CLOUDFLARE_API_KEY,
 			CLOUDFLARE_EMAIL
@@ -153,7 +172,7 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 
 		// Check if we need confirmation
 		$needs_confirmation = false;
-		$zones_data = array();
+		$zones_data         = array();
 
 		foreach ( $zone_ids as $zone_id ) {
 			$zone_name = '';
@@ -171,21 +190,27 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 			);
 
 			$zones_data[] = array(
-				'id' => $zone_id,
-				'name' => $zone_name,
+				'id'             => $zone_id,
+				'name'           => $zone_name,
 				'existing_rules' => $existing_rules,
 			);
 
 			// If zone has rules and they're not identical to new rules, we need confirmation
 			if ( ! empty( $existing_rules ) ) {
 				// Compare rules by their descriptions
-				$existing_descriptions = array_map( function( $rule ) {
-					return $rule['description'] ?? '';
-				}, $existing_rules );
+				$existing_descriptions = array_map(
+					function( $rule ) {
+						return $rule['description'] ?? '';
+					},
+					$existing_rules
+				);
 
-				$new_descriptions = array_map( function( $rule ) {
-					return $rule['description'] ?? '';
-				}, $new_rules );
+				$new_descriptions = array_map(
+					function( $rule ) {
+						return $rule['description'] ?? '';
+					},
+					$new_rules
+				);
 
 				if ( $existing_descriptions !== $new_descriptions ) {
 					$needs_confirmation = true;
@@ -211,14 +236,14 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 						// Create a map of new rules by description for comparison
 						$new_rules_map = array();
 						foreach ( $new_rules as $new_rule ) {
-							$desc = $new_rule['description'] ?? '';
+							$desc                   = $new_rule['description'] ?? '';
 							$new_rules_map[ $desc ] = $new_rule;
 						}
 
 						// Create a map of existing rules by description
 						$existing_rules_map = array();
 						foreach ( $zone_data['existing_rules'] as $existing_rule ) {
-							$desc = $existing_rule['description'] ?? '';
+							$desc                        = $existing_rule['description'] ?? '';
 							$existing_rules_map[ $desc ] = $existing_rule;
 						}
 
@@ -226,7 +251,7 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 						$matching_count = 0;
 						$changing_count = 0;
 						$removing_count = 0;
-						$adding_count = 0;
+						$adding_count   = 0;
 
 						foreach ( $zone_data['existing_rules'] as $existing_rule ) {
 							$desc = $existing_rule['description'] ?? '';
@@ -283,17 +308,17 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 									<?php
 									// Show existing rules first
 									foreach ( $zone_data['existing_rules'] as $existing_rule ) :
-										$desc = $existing_rule['description'] ?? 'Unnamed Rule';
+										$desc            = $existing_rule['description'] ?? 'Unnamed Rule';
 										$existing_action = $existing_rule['action'] ?? 'N/A';
-										$existing_expr = $existing_rule['expression'] ?? '';
+										$existing_expr   = $existing_rule['expression'] ?? '';
 
 										if ( isset( $new_rules_map[ $desc ] ) ) :
-											$new_action = $new_rules_map[ $desc ]['action'] ?? 'N/A';
-											$new_expr = $new_rules_map[ $desc ]['expression'] ?? '';
+											$new_action   = $new_rules_map[ $desc ]['action'] ?? 'N/A';
+											$new_expr     = $new_rules_map[ $desc ]['expression'] ?? '';
 											$is_identical = ( $existing_action === $new_action && $existing_expr === $new_expr );
 											$status_class = $is_identical ? 'matching' : 'changing';
-											$status_icon = $is_identical ? '✓' : '↻';
-											$rule_row_id = 'rule-' . md5( $zone_data['id'] . '-' . $desc );
+											$status_icon  = $is_identical ? '✓' : '↻';
+											$rule_row_id  = 'rule-' . md5( $zone_data['id'] . '-' . $desc );
 											?>
 											<tr class="rule-<?php echo $status_class; ?>">
 												<td class="rule-status">

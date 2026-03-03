@@ -278,12 +278,14 @@ $wp_path_strings = array(
 	'network.php',
 	'wp-ajf.php',
 );
+
 $wp_paths = array_map(
 	function ( $path ) {
 		return '(http.request.uri.path contains "' . $path . '")';
 	},
 	$wp_path_strings
 );
+
 $wp_paths = implode( ' or ', $wp_paths );
 
 // Block General AI Crawlers and Assistant Bots

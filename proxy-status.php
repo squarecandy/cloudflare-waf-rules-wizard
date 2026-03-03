@@ -48,8 +48,8 @@ $zones = pw_get_cloudflare_zones(
 );
 
 foreach ( $zones as $zone ) :
-	$zone_id      = $zone['id'];
-	$dns_records  = pw_get_zone_dns_records(
+	$zone_id     = $zone['id'];
+	$dns_records = pw_get_zone_dns_records(
 		$zone_id,
 		CLOUDFLARE_API_KEY,
 		CLOUDFLARE_EMAIL

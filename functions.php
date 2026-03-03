@@ -49,7 +49,7 @@ function pw_get_existing_waf_rules( $zone_id, $api_key, $api_email ) {
 	}
 
 	// Get the rules from the ruleset
-	$rules_url = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets/{$ruleset_id}";
+	$rules_url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets/{$ruleset_id}";
 	$rules_response = pw_make_curl_request( $rules_url, 'GET', $headers );
 
 	if ( isset( $rules_response['result']['rules'] ) ) {
@@ -350,10 +350,10 @@ function pw_toggle_zone_proxy_status( $zone_id, $api_key, $api_email, $enable_pr
 		'Content-Type: application/json',
 	);
 
-	$per_page       = 100;
-	$page           = 1;
-	$updated_count  = 0;
-	$error_count    = 0;
+	$per_page      = 100;
+	$page          = 1;
+	$updated_count = 0;
+	$error_count   = 0;
 
 	do {
 		$url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/dns_records?per_page={$per_page}&page={$page}";
@@ -544,14 +544,14 @@ function pw_restore_proxy_backup( $filename, $api_key, $api_email ) {
 		);
 	}
 
-	$headers        = array(
+	$headers       = array(
 		"X-Auth-Email: $api_email",
 		"X-Auth-Key: $api_key",
 		'Content-Type: application/json',
 	);
-	$updated_count  = 0;
-	$error_count    = 0;
-	$skipped_count  = 0;
+	$updated_count = 0;
+	$error_count   = 0;
+	$skipped_count = 0;
 
 	foreach ( $backup_data['zones'] as $zone_backup ) {
 		$zone_id = $zone_backup['zone_id'];
@@ -804,9 +804,9 @@ function pw_restore_zone_from_backup( $zone_id, $filename, $api_key, $api_email 
 }
 
 if ( ! function_exists( 'pre_r' ) ) :
-	function pre_r( $array ) {
+	function pre_r( $data ) {
 		print '<pre class="squarecandy-pre-r">';
-		print_r( $array ); // phpcs:ignore
+		print_r( $data ); // phpcs:ignore
 		print '</pre>';
 	}
 endif;
