@@ -421,19 +421,19 @@ $presswizards_rules = array(
 
 $rulesets = array(
 	'squarecandy_rules'           => array(
-		'description' => 'Square Candy FREE Rules 2025-04',
+		'description' => 'Square Candy FREE Rules 2026-03',
 		'rules'       => $squarecandy_rules_free,
 	),
 	'squarecandy_rules_ecommerce' => array(
-		'description' => 'Square Candy FREE Ecommerce Rules 2025-04',
+		'description' => 'Square Candy FREE Ecommerce Rules 2026-03',
 		'rules'       => $squarecandy_rules_free,
 	),
 	'squarecandy_rules_pro'       => array(
-		'description' => 'Square Candy PRO Rules 2025-04',
+		'description' => 'Square Candy PRO Rules 2026-03',
 		'rules'       => $squarecandy_rules_pro,
 	),
 	'presswizards_rules'          => array(
-		'description' => 'Press Wizards Rules 2025-04',
+		'description' => 'Press Wizards Rules 2026-03',
 		'rules'       => $presswizards_rules,
 	),
 );
