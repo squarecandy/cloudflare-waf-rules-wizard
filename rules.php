@@ -39,6 +39,8 @@ $zenventory = '(starts_with(http.request.uri.path, "/wp-json/wc") and http.user_
 $salesforce_wc = '(starts_with(http.request.uri.path, "/wp-json/wc") and http.user_agent contains "SFDC-Callout")';
 // Allow Salesforce GiveWP API Calls
 $salesforce_give = '(starts_with(http.request.uri.path, "/give-api/donations") and http.user_agent contains "SFDC-Callout")';
+// Allow squarecandy visual regression testing
+$squarecandy_visual_regression = '(http.user_agent eq "squarecandy-visual-regression-testing")';
 
 // Allow Rules Free
 $allow_free            = array(
@@ -57,6 +59,7 @@ $allow_free            = array(
 	$github,
 	$asana,
 	$betteruptime,
+	$squarecandy_visual_regression,
 );
 $allow_expression_free = implode( ' or ', $allow_free );
 
