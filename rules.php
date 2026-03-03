@@ -93,7 +93,6 @@ $cloud_asns = array(
 $cloud_asns = implode( ' ', $cloud_asns );
 
 // Challenge/Block Web Hosting ASNs
-// @TODO - add comments for what we're actually blocking here...
 $web_hosts = array(
 	'11590', // Bucklog SARL (France) - abuse on mdhistory.org 2025/04
 	'26496', // GoDaddy
@@ -101,78 +100,76 @@ $web_hosts = array(
 	'18450', // WebNX
 	'50673', // Serverius Holding B.V. (Netherlands)
 	'7393', // Cybercon
-	'14061',
-	'31815',
-	'205544',
-	'199610',
-	'21501',
-	'16125',
-	'51540',
-	'264649',
-	'39020',
-	'30083',
-	'35540',
-	'55293',
-	'36943',
-	'32244',
-	'6724',
-	'63949',
-	'7203',
-	'201924',
-	'30633',
-	'208046',
-	'36352',
-	'25264',
-	'32475',
-	'23033',
-	'32475',
-	'212047',
-	'32475',
-	'31898',
-	'210920',
-	'211252',
-	'16276',
-	'23470',
-	'136907',
-	'12876',
-	'210558',
-	'132203',
-	'61317',
-	'212238',
-	'37963',
-	'13238',
-	'2639',
-	'20473',
-	'63018',
-	'395954',
-	'19437',
-	'207990',
-	'27411',
-	'53667',
-	'27176',
-	'396507',
-	'206575',
-	'20454',
-	'51167',
-	'60781',
-	'62240',
-	'398493',
-	'213230',
-	'26347',
-	'20738',
-	'45102',
-	'24940',
-	'57523',
-	'8100',
-	'8560',
-	'6939',
-	'14178',
-	'46606',
-	'197540',
-	'397630',
-	'9009',
-	'11878',
-	'49505',
+	'14061', // DigitalOcean
+	'31815', // GoDaddy (additional ASN)
+	'205544', // Leaseweb UK Limited
+	'199610', // marbis GmbH (German hosting)
+	'21501', // Host Europe GmbH
+	'16125', // UAB Cherry Servers (Lithuania)
+	'51540', // DAL Bilgi Teknolojileri (Turkish hosting)
+	'264649', // NUT HOST SRL (Argentina)
+	'39020', // Comvive (Spain)
+	'30083', // velia.net
+	'35540', // OVH SAS
+	'55293', // A2 Hosting
+	'36943', // Web Africa
+	'32244', // Liquid Web Inc.
+	'6724', // STRATO AG (Germany)
+	'63949', // Akamai Connected Cloud / Linode
+	'7203', // Leaseweb USA
+	'201924', // ENAHOST s.r.o. (Czech Republic)
+	'30633', // Leaseweb USA
+	'208046', // KOGLER Gabin (France)
+	'36352', // Colocrossing
+	'25264', // Afagh Andish Dadeh Pardis Co. (Iran)
+	'32475', // HorizonIQ / Internap
+	'23033', // Wowrack
+	'212047', // Civo LTD (UK cloud)
+	'31898', // Oracle Cloud
+	'210920', // Civo LTD (UK cloud)
+	'211252', // Akari Networks K.K. (Japan)
+	'16276', // OVH SAS
+	'23470', // ReliableSite.Net LLC
+	'136907', // Huawei Cloud
+	'12876', // Scaleway S.A.S. (France)
+	'210558', // 1337 Services GmbH
+	'132203', // Tencent Cloud
+	'61317', // Hivelocity Inc.
+	'212238', // Datacamp Limited
+	'37963', // Alibaba Cloud
+	'13238', // Yandex LLC
+	'2639', // Zoho Corp
+	'20473', // The Constant Company / Vultr
+	'63018', // Dedicated.com
+	'395954', // LeaseWeb USA (Los Angeles)
+	'19437', // Secured Servers LLC
+	'207990', // HostRoyale Technologies Pvt Ltd (India)
+	'27411', // LeaseWeb USA (Chicago)
+	'53667', // Frantech Solutions / BuyVM
+	'27176', // DataWagon
+	'396507', // Emerald Onion (Tor privacy network)
+	'206575', // DATABOX d.o.o. (Bosnia)
+	'20454', // Secured Servers LLC
+	'51167', // Contabo GmbH
+	'60781', // LeaseWeb Netherlands B.V.
+	'62240', // Clouvider
+	'398493', // System In Place
+	'213230', // Hetzner Online GmbH
+	'26347', // New Dream Network / DreamHost
+	'20738', // Heart Internet (UK)
+	'45102', // Alibaba (China) Technology Co., Ltd.
+	'24940', // Hetzner Online GmbH
+	'57523', // Chang Way Technologies Co. (Hong Kong)
+	'8100', // QuadraNet Inc.
+	'8560', // IONOS / 1&1
+	'6939', // Hurricane Electric
+	'14178', // Megacable Comunicaciones (Mexico)
+	'46606', // Endurance International Group / Bluehost / HostGator
+	'197540', // netcup GmbH
+	'397630', // Blazing SEO LLC (proxy/scraping)
+	'9009', // M247 Europe SRL
+	'11878', // tzulo, inc.
+	'49505', // JSC Selectel (Russia)
 	'401116', // Nybula LLC https://threatfox.abuse.ch/browse/tag/Nybula%20LLC/
 );
 $web_hosts = implode( ' ', $web_hosts );
