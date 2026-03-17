@@ -186,7 +186,8 @@ $aggressive_crawlers = array(
 	'anthropic-ai', // Anthropic AI crawler
 	'barkrowler',
 	'br-crawler',
-	'bytespider',
+	'bytedance', // TikTok crawler
+	'bytespider', // ByteDance/TikTok crawler
 	'ccbot', // Common Crawl (primary LLM training data source)
 	'claudebot', // Anthropic Claude crawler
 	'cms spider',
@@ -201,7 +202,7 @@ $aggressive_crawlers = array(
 	'email_hunter',
 	'extractorpro',
 	'friendlycrawler',
-	'gptbot', // OpenAI GPT crawler
+	// 'gptbot', // OpenAI GPT crawler // Let CloudFlare's AI management take care of this.
 	'guestbook',
 	'img2dataset', // image dataset harvesting tool
 	'iplexx',
