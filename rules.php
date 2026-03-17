@@ -181,66 +181,59 @@ $challenge_asns = '(ip.src.asnum in {' . $cloud_asns . ' ' . $web_hosts . '} and
 $aggressive_crawlers = array(
 	'advanced email extractor',
 	'ahrefsbot',
+	'aiohttp',
 	'amazonbot',
-	'atspider',
+	'anthropic-ai', // Anthropic AI crawler
 	'barkrowler',
-	'bwh3_user_agent',
-	'bytedance',
+	'br-crawler',
 	'bytespider',
+	'ccbot', // Common Crawl (primary LLM training data source)
+	'claudebot', // Anthropic Claude crawler
 	'cms spider',
+	'cohere-ai', // Cohere LLM crawler
 	'contactbot',
 	'contentsmartz',
 	'datacha0s',
 	'dataforseobot',
 	'dbrowse ',
+	'dotbot', // Moz SEO crawler
 	'ebrowse',
-	'efp@gmx.net',
 	'email_hunter',
-	'emailcollector',
-	'emailsiphon',
-	'emailspider',
-	'emailwolf',
 	'extractorpro',
-	'franklin locator',
 	'friendlycrawler',
+	'gptbot', // OpenAI GPT crawler
 	'guestbook',
-	'indy library',
+	'img2dataset', // image dataset harvesting tool
 	'iplexx',
-	'isc systems',
-	'iupui research',
 	'letscrawl.com',
-	'lincoln stater',
+	'libwww-perl', // old Perl HTTP client, rarely legitimate
 	'lmqueuebot',
 	'Mail.RU_Bot',
-	'missauga locate',
-	'missouri college browse',
-	'mizzu labs',
 	'mj12bot',
-	'mo college',
 	'mvaclient',
 	'nasa search',
-	'newt activex',
+	'netsystemsresearch', // aggressive "research" crawler
+	'nikto', // web vulnerability scanner
 	'nsauditor',
-	'pbrowse',
 	'perplexitybot',
 	'petalbot',
-	'peval 1.4b',
-	'poirot',
-	'port huron labs',
 	'production bot',
 	'program shareware',
-	'psycheclone',
+	'python-httpx', // Python HTTP client used in modern scrapers
 	'scan4mail',
+	'scrapy', // Python scraping framework
 	'screaming frog',
 	'searchbot admin@google.com',
 	'semrushbot',
+	'seokicks', // German SEO crawler
+	'serpstatbot', // SerpStat SEO crawler
 	'seznambot',
 	'shablastbot',
 	'snap.com',
 	'snapbot',
 	'sogou',
 	'sohu agent',
-	'surf15a',
+	'sqlmap', // SQL injection attack tool
 	'timpibot',
 	'trackback',
 	'trendictionbot',
@@ -250,6 +243,7 @@ $aggressive_crawlers = array(
 	'webemailextrac',
 	'webvulncrawl',
 	'yandex',
+	'zgrab', // Go-based attack scanner
 );
 
 $aggressive_crawlers = array_map(
