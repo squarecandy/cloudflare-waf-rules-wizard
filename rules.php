@@ -285,7 +285,26 @@ $ai_crawlers = '(cf.verified_bot_category in {"AI Crawler" "Other" "AI Assistant
 // Block OpenAI (when they actually reveal their user agent!)
 $open_ai = '(http.user_agent contains "openai.com") or (http.user_agent contains "ChatGPT")';
 
+// Fake Google Chrome (spoofed UA: claims to be Chrome but missing sec-ch-ua client hint header)
+// Add new versions here as they appear in the wild
+$fake_chrome_versions = array(
+	'Chrome/129.0.0.0',
+	'Chrome/130.0.0.0',
+	'Chrome/131.0.0.0',
+	'Chrome/132.0.0.0',
+	'Chrome/133.0.0.0',
+);
+$fake_chrome_ua_check = implode(
+	' or ',
+	array_map(
+		function ( $v ) {
+			return '(http.user_agent contains "' . $v . '")';
+		},
+		$fake_chrome_versions
+	)
+);
 
+$fake_chrome = '((' . $fake_chrome_ua_check . ') and not any(http.request.headers.names[*] eq "sec-ch-ua") and not any(http.request.headers.names[*] eq "sec-fetch-site"))';
 
 ///// End Rules snippets /////
 
@@ -312,7 +331,7 @@ $squarecandy_rules_free = array(
 	),
 	'managed_challenge_hosts' => array(
 		'description' => 'Managed Challenge Web Hosts, Cloud Providers, TOR',
-		'expression'  => $challenge_asns . ' or ' . $tor,
+		'expression'  => $challenge_asns . ' or ' . $tor . ' or ' . $fake_chrome,
 		'action'      => 'managed_challenge',
 	),
 	'login_protection'        => array(
@@ -374,6 +393,11 @@ $squarecandy_rules_pro = array(
 	'login_protection'        => array(
 		'description' => 'Login Protection',
 		'expression'  => '(http.request.uri.path contains "wp-login.php" and not http.request.uri.query contains "action=logout")',
+		'action'      => 'managed_challenge',
+	),
+	'fake_chrome'             => array(
+		'description' => 'Managed Challenge Fake Chrome UA',
+		'expression'  => $fake_chrome,
 		'action'      => 'managed_challenge',
 	),
 );
