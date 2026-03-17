@@ -257,8 +257,8 @@ $aggressive_crawlers = implode( ' or ', $aggressive_crawlers );
 
 // TOR
 $tor = '(ip.src.country eq "T1")';
-// Block Drupal patterns
-$drupal = '(starts_with(http.request.uri.path, "/sites/default/files/")) or (starts_with(http.request.uri.path, "/sites/all/")) or (starts_with(http.request.uri.path, "/node")) or (http.request.full_uri contains "civicrm")';
+// Block Drupal patterns + misc CMS probe paths
+$drupal = '(starts_with(http.request.uri.path, "/sites/default/files/")) or (starts_with(http.request.uri.path, "/sites/all/")) or (starts_with(http.request.uri.path, "/node")) or (http.request.full_uri contains "civicrm") or (ends_with(http.request.uri.path, "/javascript"))';
 // Block Sensitive WP Paths
 $wp_path_strings = array(
 	'xmlrpc',
@@ -269,6 +269,9 @@ $wp_path_strings = array(
 	'/.env',
 	'network.php',
 	'wp-ajf.php',
+	'/tel:',   // href injection probes
+	'/tel%3a', // href injection probes (URL-encoded)
+	'/mailto',  // href injection probes (/mailto: and /mailto%3a)
 );
 
 $wp_paths = array_map(
