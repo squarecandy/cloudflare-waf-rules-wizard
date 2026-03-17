@@ -317,7 +317,7 @@ $squarecandy_rules_free = array(
 	),
 	'login_protection'        => array(
 		'description' => 'Login Protection',
-		'expression'  => '(http.request.uri.path contains "wp-login.php" and not http.request.uri.query contains "action=logout")',
+		'expression'  => '(http.request.uri.path contains "wp-login.php" and not http.request.uri.query contains "action=logout" and not http.request.uri.query contains "action=postpass")',
 		'action'      => 'managed_challenge',
 	),
 );
