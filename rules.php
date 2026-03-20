@@ -23,6 +23,8 @@ $letsencrypt = '(http.user_agent contains "letsencrypt" and http.request.uri.pat
 $stripe = '(cf.verified_bot_category eq "Webhooks" and http.user_agent contains "stripe")';
 // Allow EWWW / ExactDN / EasyIO
 $ewww = '(http.user_agent contains "ExactDN") or (http.user_agent contains "ewww.io")';
+// Allow Cloudflare Observatory
+$observatory = '(http.user_agent contains "CloudflareObservatory")';
 // Allow Square Candy Visual Regression Tools
 $visual_regression = '(http.user_agent eq "squarecandy-visual-regression-testing")';
 // Allow Patchstack
@@ -52,6 +54,7 @@ $allow_free            = array(
 	$letsencrypt,
 	$stripe,
 	$ewww,
+	$observatory,
 	$visual_regression,
 	$patchstack,
 	$github,
