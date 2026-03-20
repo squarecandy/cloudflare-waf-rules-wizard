@@ -39,6 +39,9 @@ require_once 'config.php';
 				<li class="<?php echo 'proxy-status' === $current_page ? 'active' : ''; ?>">
 					<a href="index.php?page=proxy-status">DNS Proxy Status</a>
 				</li>
+				<li class="<?php echo 'nginx-rules' === $current_page ? 'active' : ''; ?>">
+					<a href="index.php?page=nginx-rules">Nginx Rules</a>
+				</li>
 			</ul>
 		</div>
 		<?php
@@ -66,6 +69,8 @@ require_once 'config.php';
 			include 'security-status.php';
 		} elseif ( 'proxy-status' === $current_page ) {
 			include 'proxy-status.php';
+		} elseif ( 'nginx-rules' === $current_page ) {
+			include 'nginx-rules.php';
 		} else { // Default to WAF Rules page
 			include 'waf-rules.php';
 		}
