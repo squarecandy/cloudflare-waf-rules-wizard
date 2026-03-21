@@ -204,6 +204,7 @@ $aggressive_crawlers = array(
 	'ebrowse',
 	'email_hunter',
 	'extractorpro',
+	'FacebookBot', // Speech recognition and language model training, Minimal user-facing impact
 	'friendlycrawler',
 	// 'gptbot', // OpenAI GPT crawler // Let CloudFlare's AI management take care of this.
 	'guestbook',
@@ -213,12 +214,14 @@ $aggressive_crawlers = array(
 	'libwww-perl', // old Perl HTTP client, rarely legitimate
 	'lmqueuebot',
 	'Mail.RU_Bot',
+	'meta-externalagent', // AI model training and content indexing. Stops AI training; no effect on link previews
 	'mj12bot',
 	'mvaclient',
 	'nasa search',
 	'netsystemsresearch', // aggressive "research" crawler
 	'nikto', // web vulnerability scanner
 	'nsauditor',
+	'panscient', // agressive bot trying to index "people" data (business contacts)
 	'perplexitybot',
 	'petalbot',
 	'production bot',
