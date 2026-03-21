@@ -47,12 +47,12 @@ $drupal_prefix_paths = array(
 // nginx ~* location regex is matched against $uri (decoded path, no query string).
 // Mappings that need special handling:
 $nginx_path_map = array(
-	'/.env'    => '/\.env',      // escape the dot
+	'/.env'       => '/\.env',      // escape the dot
 	'network.php' => 'network\.php',
 	'wp-ajf.php'  => 'wp-ajf\.php',
-	'/tel%3a'  => '/tel(%3a|:)', // match both encoded and literal in one pattern
-	'/tel:'    => null,          // covered by the combined pattern above — skip
-	'/mailto'  => '/mailto(:|%3a)', // covers /mailto: and /mailto%3a
+	'/tel%3a'     => '/tel(%3a|:)', // match both encoded and literal in one pattern
+	'/tel:'       => null,          // covered by the combined pattern above — skip
+	'/mailto'     => '/mailto(:|%3a)', // covers /mailto: and /mailto%3a
 );
 
 $path_regex_parts = array();
@@ -250,7 +250,7 @@ NGINX;
 // 4. Write output files
 // ──────────────────────────────────────────────────────────────────────────────
 
-$timestamp = date( 'Y-m-d H:i:s' );
+$timestamp  = date( 'Y-m-d H:i:s' );
 $output_dir = __DIR__ . '/nginx';
 
 if ( ! is_dir( $output_dir ) ) {
@@ -276,5 +276,5 @@ foreach ( $files as $filename => $include_wp_login ) {
 	echo "Generated: nginx/{$filename} {$label}" . PHP_EOL;
 }
 
-echo "  Path patterns : " . count( $path_regex_parts ) . PHP_EOL;
-echo "  UA patterns   : " . count( $all_ua_entries ) . PHP_EOL;
+echo '  Path patterns : ' . count( $path_regex_parts ) . PHP_EOL;
+echo '  UA patterns   : ' . count( $all_ua_entries ) . PHP_EOL;

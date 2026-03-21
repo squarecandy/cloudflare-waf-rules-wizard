@@ -11,9 +11,9 @@ defined( 'CLOUDFLARE_API_KEY' ) || exit( 'No direct script access allowed' );
 require_once __DIR__ . '/generate-nginx-rules.php';
 
 // ── Read generated files ──────────────────────────────────────────────────────
-$nginx_dir        = __DIR__ . '/nginx';
-$file_standard    = $nginx_dir . '/bot-blocking.conf';
-$file_wp_login    = $nginx_dir . '/bot-blocking-wp-login.conf';
+$nginx_dir     = __DIR__ . '/nginx';
+$file_standard = $nginx_dir . '/bot-blocking.conf';
+$file_wp_login = $nginx_dir . '/bot-blocking-wp-login.conf';
 
 $conf_standard = file_exists( $file_standard ) ? file_get_contents( $file_standard ) : '(file not found)';
 $conf_wp_login = file_exists( $file_wp_login ) ? file_get_contents( $file_wp_login ) : '(file not found)';
