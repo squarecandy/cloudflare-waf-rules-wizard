@@ -145,21 +145,16 @@ $ua_regex = implode( '|', $ua_regex_parts );
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Render a complete nginx bot-blocking config string.
+ * Render the main nginx bot-blocking config (everything except wp-login).
  *
  * @param string $filename       Basename used in the header comment.
  * @param string $timestamp      Generation timestamp string.
  * @param array  $drupal_prefixes Prefix paths for ^~ location blocks.
  * @param string $path_regex     Compiled path regex string.
  * @param string $ua_regex       Compiled UA regex string.
- * @param bool   $include_wp_login Whether to include the wp-login block.
  * @return string
  */
-function render_nginx_conf( $filename, $timestamp, $drupal_prefixes, $path_regex, $ua_regex, $include_wp_login ) {
-	$wp_login_note = $include_wp_login
-		? '# ENABLED — requires WPS Hide Login or equivalent on every site using this config.'
-		: '# DISABLED — use bot-blocking-wp-login.conf if you use WPS Hide Login.';
-
+function render_nginx_conf( $filename, $timestamp, $drupal_prefixes, $path_regex, $ua_regex ) {
 	$output = <<<NGINX
 # ============================================================================
 # {$filename} — AUTO-GENERATED, DO NOT EDIT BY HAND
@@ -168,51 +163,8 @@ function render_nginx_conf( $filename, $timestamp, $drupal_prefixes, $path_regex
 # ============================================================================
 # Include this file inside your nginx server {} block, e.g.:
 #   include /path/to/{$filename};
+# Also include bot-blocking-wp-login.conf if wp-login.php protection is needed.
 # ============================================================================
-
-# ─────────────────────────────────────────────────
-# wp-login.php protection
-# {$wp_login_note}
-# ─────────────────────────────────────────────────
-NGINX;
-
-	if ( $include_wp_login ) {
-		$output .= <<<'NGINX'
-
-set $block_wp_login 0;
-if ($uri = /wp-login.php) {
-	set $block_wp_login 1;
-}
-if ($arg_action = logout) {
-	set $block_wp_login 0;
-}
-if ($arg_action = postpass) {
-	set $block_wp_login 0;
-}
-if ($block_wp_login = 1) {
-	return 444;
-}
-NGINX;
-	} else {
-		$output .= <<<'NGINX'
-
-# set $block_wp_login 0;
-# if ($uri = /wp-login.php) {
-# 	set $block_wp_login 1;
-# }
-# if ($arg_action = logout) {
-# 	set $block_wp_login 0;
-# }
-# if ($arg_action = postpass) {
-# 	set $block_wp_login 0;
-# }
-# if ($block_wp_login = 1) {
-# 	return 444;
-# }
-NGINX;
-	}
-
-	$output .= <<<NGINX
 
 # ─────────────────────────────────────────────────
 # Drupal / Node probe paths — prefix match
@@ -246,6 +198,46 @@ NGINX;
 	return $output;
 }
 
+/**
+ * Render the wp-login-only nginx config.
+ *
+ * @param string $filename  Basename used in the header comment.
+ * @param string $timestamp Generation timestamp string.
+ * @return string
+ */
+function render_wp_login_conf( $filename, $timestamp ) {
+	return <<<NGINX
+# ============================================================================
+# {$filename} — AUTO-GENERATED, DO NOT EDIT BY HAND
+# Generated: {$timestamp}
+# Source:    rules.php  (edit that file, then re-run generate-nginx-rules.php)
+# ============================================================================
+# Include alongside bot-blocking.conf when wp-login.php protection is needed
+# and /wp-login.php is the real login URL (i.e. WPS Hide Login is NOT active).
+#   include /path/to/bot-blocking.conf;
+#   include /path/to/{$filename};
+# ============================================================================
+
+# ─────────────────────────────────────────────────
+# wp-login.php protection
+# Allows ?action=logout and ?action=postpass through.
+# ─────────────────────────────────────────────────
+set \$block_wp_login 0;
+if (\$uri = /wp-login.php) {
+	set \$block_wp_login 1;
+}
+if (\$arg_action = logout) {
+	set \$block_wp_login 0;
+}
+if (\$arg_action = postpass) {
+	set \$block_wp_login 0;
+}
+if (\$block_wp_login = 1) {
+	return 444;
+}
+NGINX;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // 4. Write output files
 // ──────────────────────────────────────────────────────────────────────────────
@@ -257,24 +249,21 @@ if ( ! is_dir( $output_dir ) ) {
 	mkdir( $output_dir, 0755, true );
 }
 
-$files = array(
-	'bot-blocking.conf'          => false, // no wp-login block
-	'bot-blocking-wp-login.conf' => true,  // with wp-login block
+// Main rules file — all path/UA blocking, no wp-login section
+$content = render_nginx_conf(
+	'bot-blocking.conf',
+	$timestamp,
+	$drupal_prefix_paths,
+	$path_regex,
+	$ua_regex
 );
+file_put_contents( $output_dir . '/bot-blocking.conf', $content );
+echo 'Generated: nginx/bot-blocking.conf          (path/UA rules, no wp-login)' . PHP_EOL;
 
-foreach ( $files as $filename => $include_wp_login ) {
-	$content = render_nginx_conf(
-		$filename,
-		$timestamp,
-		$drupal_prefix_paths,
-		$path_regex,
-		$ua_regex,
-		$include_wp_login
-	);
-	file_put_contents( $output_dir . '/' . $filename, $content );
-	$label = $include_wp_login ? '(with wp-login block)   ' : '(no wp-login block)     ';
-	echo "Generated: nginx/{$filename} {$label}" . PHP_EOL;
-}
+// wp-login-only file — include alongside bot-blocking.conf when needed
+$wp_login_content = render_wp_login_conf( 'bot-blocking-wp-login.conf', $timestamp );
+file_put_contents( $output_dir . '/bot-blocking-wp-login.conf', $wp_login_content );
+echo 'Generated: nginx/bot-blocking-wp-login.conf (wp-login rule only)' . PHP_EOL;
 
 echo '  Path patterns : ' . count( $path_regex_parts ) . PHP_EOL;
 echo '  UA patterns   : ' . count( $all_ua_entries ) . PHP_EOL;
