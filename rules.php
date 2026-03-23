@@ -272,17 +272,27 @@ $tor = '(ip.src.country eq "T1")';
 $drupal = '(starts_with(http.request.uri.path, "/sites/default/files/")) or (starts_with(http.request.uri.path, "/sites/all/")) or (starts_with(http.request.uri.path, "/node")) or (http.request.full_uri contains "civicrm") or (ends_with(http.request.uri.path, "/javascript"))';
 // Block Sensitive WP Paths
 $wp_path_strings = array(
-	'xmlrpc',
-	'xmrlpc', // common misspelling by bots
-	'wlwmanifest',
-	'wp-config',
-	'passwd',
-	'/.env',
-	'network.php',
-	'wp-ajf.php',
-	'/tel:',   // href injection probes
-	'/tel%3a', // href injection probes (URL-encoded)
-	'/mailto',  // href injection probes (/mailto: and /mailto%3a)
+	'xmlrpc',           // WordPress XML-RPC endpoint — brute force and DDoS amplification target
+	'xmrlpc',           // common misspelling by bots
+	'wlwmanifest',      // Windows Live Writer manifest — unused legacy endpoint
+	'wp-config',        // WordPress config file containing DB credentials
+	'passwd',           // /etc/passwd probe
+	'/.env',            // environment file with credentials
+	'network.php',      // WordPress Multisite network admin probe / dropped malware filename
+	'wp-ajf.php',       // malicious file probe
+	'/tel:',            // href injection probes
+	'/tel%3a',          // href injection probes (URL-encoded)
+	'/mailto',          // href injection probes (/mailto: and /mailto%3a)
+	'/.git',            // git repo/object exposure
+	'/phpinfo',         // PHP info disclosure
+	'/phpmyadmin',      // DB admin panel probe
+	'readme.html',      // WordPress version fingerprinting
+	'license.txt',      // WordPress version fingerprinting
+	'wp-trackback.php', // dead feature, spam/attack vector
+	'debug.log',        // exposed WordPress debug log
+	'/.htaccess',       // Apache config probe
+	'.bak',             // backup file probes
+	'.sql',             // database dump exposure
 );
 
 $wp_paths = array_map(
