@@ -187,6 +187,7 @@ $aggressive_crawlers = array(
 	'aiohttp',
 	'amazonbot',
 	'anthropic-ai', // Anthropic AI crawler
+	'AwarioBot',
 	'barkrowler',
 	'br-crawler',
 	'bytedance', // TikTok crawler
@@ -214,9 +215,11 @@ $aggressive_crawlers = array(
 	'libwww-perl', // old Perl HTTP client, rarely legitimate
 	'lmqueuebot',
 	'Mail.RU_Bot',
+	'marginalia', // search.marginalia.nu
 	'meta-externalagent', // AI model training and content indexing. Stops AI training; no effect on link previews
 	'mj12bot',
 	'mvaclient',
+	'NapBot',
 	'nasa search',
 	'netsystemsresearch', // aggressive "research" crawler
 	'nikto', // web vulnerability scanner
@@ -231,11 +234,13 @@ $aggressive_crawlers = array(
 	'scrapy', // Python scraping framework
 	'screaming frog',
 	'searchbot admin@google.com',
+	'SemanticScholarBot',
 	'semrushbot',
 	'seokicks', // German SEO crawler
 	'serpstatbot', // SerpStat SEO crawler
 	'seznambot',
 	'shablastbot',
+	'SleepBot',
 	'snap.com',
 	'snapbot',
 	'sogou',
