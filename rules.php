@@ -97,7 +97,6 @@ $cloud_asns = implode( ' ', $cloud_asns );
 
 // Challenge/Block Web Hosting ASNs
 $web_hosts = array(
-	'11590', // Bucklog SARL (France) - abuse on mdhistory.org 2025/04
 	'26496', // GoDaddy
 	'398101', // GoDaddy
 	'18450', // WebNX
@@ -174,6 +173,9 @@ $web_hosts = array(
 	'11878', // tzulo, inc.
 	'49505', // JSC Selectel (Russia)
 	'401116', // Nybula LLC https://threatfox.abuse.ch/browse/tag/Nybula%20LLC/
+	'11590', // Bucklog SARL (France) - abuse on mdhistory.org 2025/04
+	'AS210006', // tutamail.com Kazakhstan origin webhost. Maybe TOR traffic source. - abuse on orionmagazine.org 2026/03
+	'AS211590', // tutamail.com France origin webhost. Maybe TOR traffic source. - abuse on orionmagazine.org 2026/03
 );
 $web_hosts = implode( ' ', $web_hosts );
 
