@@ -218,7 +218,7 @@ $aggressive_crawlers = array(
 	'lmqueuebot',
 	'Mail.RU_Bot',
 	'marginalia', // search.marginalia.nu
-	'meta-externalagent', // AI model training and content indexing. Stops AI training; no effect on link previews
+	'meta-externalagent', // Meta/Facebook AI model training and content indexing. Stops AI training; no effect on link previews
 	'mj12bot',
 	'mvaclient',
 	'NapBot',
@@ -282,6 +282,7 @@ $wp_path_strings = array(
 	'/.env',            // environment file with credentials
 	'network.php',      // WordPress Multisite network admin probe / dropped malware filename
 	'wp-ajf.php',       // malicious file probe
+	'eval-stdin.php',   // dropped malware filename
 	'/tel:',            // href injection probes
 	'/tel%3a',          // href injection probes (URL-encoded)
 	'/mailto',          // href injection probes (/mailto: and /mailto%3a)
@@ -332,6 +333,8 @@ $fake_chrome_ua_check = implode(
 
 $fake_chrome = '((' . $fake_chrome_ua_check . ') and not any(http.request.headers.names[*] eq "sec-ch-ua") and not any(http.request.headers.names[*] eq "sec-fetch-site"))';
 
+$fu_waf = '(http.request.full_uri contains "FUCKYOUWAF")';
+
 ///// End Rules snippets /////
 
 $squarecandy_rules_free = array(
@@ -347,7 +350,7 @@ $squarecandy_rules_free = array(
 	),
 	'block_paths'             => array(
 		'description' => 'Block WP Paths, Druapl, AI Crawlers',
-		'expression'  => $wp_paths . ' or ' . $drupal . ' or ' . $ai_crawlers . ' or ' . $open_ai,
+		'expression'  => $wp_paths . ' or ' . $drupal . ' or ' . $ai_crawlers . ' or ' . $open_ai . ' or ' . $fu_waf,
 		'action'      => 'block',
 	),
 	'block_crawlers'          => array(
@@ -383,7 +386,7 @@ $squarecandy_rules_pro = array(
 	),
 	'block_wp_paths'          => array(
 		'description' => 'Block WP Paths',
-		'expression'  => $wp_paths,
+		'expression'  => $wp_paths . ' or ' . $fu_waf,
 		'action'      => 'block',
 	),
 	'block_drupal_paths'      => array(
