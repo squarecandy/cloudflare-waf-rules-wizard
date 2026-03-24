@@ -174,8 +174,8 @@ $web_hosts = array(
 	'49505', // JSC Selectel (Russia)
 	'401116', // Nybula LLC https://threatfox.abuse.ch/browse/tag/Nybula%20LLC/
 	'11590', // Bucklog SARL (France) - abuse on mdhistory.org 2025/04
-	'AS210006', // tutamail.com Kazakhstan origin webhost. Maybe TOR traffic source. - abuse on orionmagazine.org 2026/03
-	'AS211590', // tutamail.com France origin webhost. Maybe TOR traffic source. - abuse on orionmagazine.org 2026/03
+	'210006', // tutamail.com Kazakhstan origin webhost. Maybe TOR traffic source. - abuse on orionmagazine.org 2026/03
+	'211590', // tutamail.com France origin webhost. Maybe TOR traffic source. - abuse on orionmagazine.org 2026/03
 );
 $web_hosts = implode( ' ', $web_hosts );
 
