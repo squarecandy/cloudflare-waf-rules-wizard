@@ -186,15 +186,24 @@ $challenge_asns = '(ip.src.asnum in {' . $cloud_asns . ' ' . $web_hosts . '} and
 
 
 // block agressive crawlers
+
+// NOTE: Do NOT block AI *retrieval* bots — these allow AI assistants to cite your pages as sources:
+// * chatgpt-user (ChatGPT live browsing)
+// * claude-web (Claude live search)
+// * perplexity-user (Perplexity retrieval)
+// These are distinct from training crawlers and drive authoritative referral traffic.
+
 $aggressive_crawlers = array(
 	'advanced email extractor',
 	'ahrefsbot',
 	'aiohttp',
 	'amazonbot',
 	'anthropic-ai', // Anthropic AI crawler
+	'applebot-extended', // Apple AI training crawler (distinct from regular Applebot; ignores crawl-delay)
 	'AwarioBot',
 	'barkrowler',
 	'br-crawler',
+	'brightdata', // Bright Data scraping infrastructure; rates set by paying clients, often extremely aggressive
 	'bytedance', // TikTok crawler
 	'bytespider', // ByteDance/TikTok crawler
 	'ccbot', // Common Crawl (primary LLM training data source)
@@ -206,6 +215,7 @@ $aggressive_crawlers = array(
 	'datacha0s',
 	'dataforseobot',
 	'dbrowse ',
+	'diffbot', // Commercial data extraction service; ignores crawl-delay, frequently hits multiple pages/sec
 	'dotbot', // Moz SEO crawler
 	'ebrowse',
 	'email_hunter',
@@ -213,8 +223,10 @@ $aggressive_crawlers = array(
 	'FacebookBot', // Speech recognition and language model training, Minimal user-facing impact
 	'friendlycrawler',
 	'Go-http-client', // Generic Go crawler, used by many scrapers and bots
-	// 'gptbot', // OpenAI GPT crawler // Let CloudFlare's AI management take care of this.
+	'google-extended', // Google Gemini/Vertex AI training crawler (distinct from Googlebot search crawler)
+	'gptbot', // OpenAI training crawler (block training; note: chatgpt-user = live retrieval = do NOT block)
 	'guestbook',
+	'iaskspider', // iAsk.ai training crawler
 	'img2dataset', // image dataset harvesting tool
 	'iplexx',
 	'letscrawl.com',
