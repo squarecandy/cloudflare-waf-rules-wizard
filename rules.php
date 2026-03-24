@@ -176,6 +176,9 @@ $web_hosts = array(
 	'11590', // Bucklog SARL (France) - abuse on mdhistory.org 2025/04
 	'210006', // tutamail.com Kazakhstan origin webhost. Maybe TOR traffic source. - abuse on orionmagazine.org 2026/03
 	'211590', // tutamail.com France origin webhost. Maybe TOR traffic source. - abuse on orionmagazine.org 2026/03
+	'47890', // UNMANAGED LTD (UK hosting/colo) - merged from Orion rules
+	'153656', // OWGELS INTERNATIONAL CO., LIMITED (Hong Kong hosting reseller) - merged from Orion rules
+	'45753', // Netsec Limited / SimCentric (Hong Kong colo/hosting) - merged from Orion rules
 );
 $web_hosts = implode( ' ', $web_hosts );
 
@@ -417,7 +420,7 @@ $squarecandy_rules_pro = array(
 		'expression'  => '(ip.src.asnum in {' . $cloud_asns . '} and not cf.client.bot and not cf.verified_bot_category in {"Search Engine Crawler" "Search Engine Optimization" "Monitoring & Analytics" "Advertising & Marketing" "Page Preview" "Academic Research" "Security" "Accessibility" "Webhooks" "Feed Fetcher" "Aggregator"})',
 		'action'      => 'managed_challenge',
 	),
-	'managed_challenge_hosts' => array(
+	'managed_challenge_tor'   => array(
 		'description' => 'Managed Challenge TOR',
 		'expression'  => $tor,
 		'action'      => 'managed_challenge',
