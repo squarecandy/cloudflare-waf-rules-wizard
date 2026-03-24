@@ -429,7 +429,7 @@ $squarecandy_rules_pro = array(
 );
 
 
-
+// depreciated... keeping for reference.
 $presswizards_rules = array(
 	array(
 		'description'       => 'Good Bots Allow',
@@ -475,9 +475,5 @@ $rulesets = array(
 	'squarecandy_rules_pro'       => array(
 		'description' => 'Square Candy PRO Rules 2026-03',
 		'rules'       => $squarecandy_rules_pro,
-	),
-	'presswizards_rules'          => array(
-		'description' => 'Press Wizards Rules 2026-03',
-		'rules'       => $presswizards_rules,
 	),
 );
