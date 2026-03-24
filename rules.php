@@ -189,6 +189,7 @@ $challenge_asns = '(ip.src.asnum in {' . $cloud_asns . ' ' . $web_hosts . '} and
 
 // NOTE: Do NOT block AI *retrieval* bots — these allow AI assistants to cite your pages as sources:
 // * chatgpt-user (ChatGPT live browsing)
+// * oai-searchbot (ChatGPT Search indexing — retrieval only, not training)
 // * claude-web (Claude live search)
 // * perplexity-user (Perplexity retrieval)
 // These are distinct from training crawlers and drive authoritative referral traffic.
