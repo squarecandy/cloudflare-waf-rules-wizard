@@ -209,6 +209,7 @@ $aggressive_crawlers = array(
 	'extractorpro',
 	'FacebookBot', // Speech recognition and language model training, Minimal user-facing impact
 	'friendlycrawler',
+	'Go-http-client', // Generic Go crawler, used by many scrapers and bots
 	// 'gptbot', // OpenAI GPT crawler // Let CloudFlare's AI management take care of this.
 	'guestbook',
 	'img2dataset', // image dataset harvesting tool
@@ -221,7 +222,7 @@ $aggressive_crawlers = array(
 	'meta-externalagent', // Meta/Facebook AI model training and content indexing. Stops AI training; no effect on link previews
 	'mj12bot',
 	'mvaclient',
-	'NapBot',
+	'NapBot', // web scraper. seen in the wild on red poppy in 2026
 	'nasa search',
 	'netsystemsresearch', // aggressive "research" crawler
 	'nikto', // web vulnerability scanner
@@ -237,12 +238,14 @@ $aggressive_crawlers = array(
 	'screaming frog',
 	'searchbot admin@google.com',
 	'SemanticScholarBot',
-	'semrushbot',
+	'semrush', // SEO crawler and scraper. Changed from SEMRushBot to SiteAuditBot in 2025. semrush.com/bot.html is still in the user agent.
 	'seokicks', // German SEO crawler
+	'SERanking', // SEO crawler
 	'serpstatbot', // SerpStat SEO crawler
 	'seznambot',
 	'shablastbot',
-	'SleepBot',
+	'SiteAuditBot', // SEMRush SEO crawler (new name)
+	'SleepBot', // web scraper. seen in the wild on red poppy in 2026
 	'snap.com',
 	'snapbot',
 	'sogou',
