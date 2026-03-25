@@ -187,105 +187,107 @@ $challenge_asns = '(ip.src.asnum in {' . $cloud_asns . ' ' . $web_hosts . '} and
 
 // block agressive crawlers
 
+// Uses shortened string patterns to stay under Cloudflare's 4096-char rule limit.
+// `matches` (regex) requires Business/WAF Advanced — so we use `contains` (free-tier compatible).
 // NOTE: Do NOT block AI *retrieval* bots — these allow AI assistants to cite your pages as sources:
 // * chatgpt-user (ChatGPT live browsing)
 // * oai-searchbot (ChatGPT Search indexing — retrieval only, not training)
 // * claude-web (Claude live search)
 // * perplexity-user (Perplexity retrieval)
 // These are distinct from training crawlers and drive authoritative referral traffic.
-
 $aggressive_crawlers = array(
-	'advanced email extractor',
-	'ahrefsbot',
+	'email extractor',
+	'ahrefs',
 	'aiohttp',
 	'amazonbot',
-	'anthropic-ai', // Anthropic AI crawler
+	'anthropic-ai',      // Anthropic AI crawler
 	'applebot-extended', // Apple AI training crawler (distinct from regular Applebot; ignores crawl-delay)
-	'AwarioBot',
-	'barkrowler',
-	'br-crawler',
-	'brightdata', // Bright Data scraping infrastructure; rates set by paying clients, often extremely aggressive
-	'bytedance', // TikTok crawler
-	'bytespider', // ByteDance/TikTok crawler
-	'ccbot', // Common Crawl (primary LLM training data source)
-	'claudebot', // Anthropic Claude crawler
+	'awariobot',
+	'barkrowl',          // barkrowler
+	'br-crawl',          // br-crawler
+	'brightdata',        // Bright Data scraping infrastructure; rates set by paying clients, often extremely aggressive
+	'bytedance',         // TikTok crawler
+	'bytespider',        // ByteDance/TikTok crawler
+	'ccbot',             // Common Crawl (primary LLM training data source)
+	'claudebot',         // Anthropic Claude crawler
 	'cms spider',
-	'cohere-ai', // Cohere LLM crawler
+	'cohere-ai',         // Cohere LLM crawler
 	'contactbot',
 	'contentsmartz',
 	'datacha0s',
-	'dataforseobot',
+	'dataforseo',        // dataforseobot
 	'dbrowse ',
-	'diffbot', // Commercial data extraction service; ignores crawl-delay, frequently hits multiple pages/sec
-	'dotbot', // Moz SEO crawler
+	'diffbot',           // Commercial data extraction service; ignores crawl-delay, frequently hits multiple pages/sec
+	'dotbot',            // Moz SEO crawler
 	'ebrowse',
 	'email_hunter',
-	'extractorpro',
-	'FacebookBot', // Speech recognition and language model training, Minimal user-facing impact
-	'friendlycrawler',
-	'Go-http-client', // Generic Go crawler, used by many scrapers and bots
-	'google-extended', // Google Gemini/Vertex AI training crawler (distinct from Googlebot search crawler)
-	'gptbot', // OpenAI training crawler (block training; note: chatgpt-user = live retrieval = do NOT block)
+	'extractorp',        // extractorpro
+	'facebookbot',       // Speech recognition and language model training, Minimal user-facing impact
+	'friendlycrawl',     // friendlycrawler
+	'go-http-',          // Go-http-client; Generic Go crawler, used by many scrapers and bots
+	'google-extended',   // Google Gemini/Vertex AI training crawler (distinct from Googlebot search crawler)
+	'gptbot',            // OpenAI training crawler (block training; note: chatgpt-user = live retrieval = do NOT block)
 	'guestbook',
-	'iaskspider', // iAsk.ai training crawler
-	'img2dataset', // image dataset harvesting tool
+	'iaskspider',              // iaskspider; iAsk.ai training crawler
+	'img2dataset',       // image dataset harvesting tool
 	'iplexx',
-	'letscrawl.com',
-	'libwww-perl', // old Perl HTTP client, rarely legitimate
-	'lmqueuebot',
-	'Mail.RU_Bot',
-	'marginalia', // search.marginalia.nu
-	'meta-externalagent', // Meta/Facebook AI model training and content indexing. Stops AI training; no effect on link previews
+	'letscrawl',         // letscrawl.com
+	'libwww-perl',       // old Perl HTTP client, rarely legitimate
+	'lmqueue',           // lmqueuebot
+	'mail.ru',           // Mail.RU_Bot
+	'marginalia',        // search.marginalia.nu
+	'meta-extern',       // meta-externalagent; Meta/Facebook AI model training. Stops AI training; no effect on link previews
 	'mj12bot',
 	'mvaclient',
-	'NapBot', // web scraper. seen in the wild on red poppy in 2026
+	'napbot',            // web scraper. seen in the wild on red poppy in 2026
 	'nasa search',
-	'netsystemsresearch', // aggressive "research" crawler
-	'nikto', // web vulnerability scanner
+	'netsystems',        // netsystemsresearch; aggressive "research" crawler
+	'nikto',             // web vulnerability scanner
 	'nsauditor',
-	'panscient', // agressive bot trying to index "people" data (business contacts)
+	'panscient',         // agressive bot trying to index "people" data (business contacts)
 	'perplexitybot',
 	'petalbot',
 	'production bot',
 	'program shareware',
-	'python-httpx', // Python HTTP client used in modern scrapers
+	'python-httpx',      // Python HTTP client used in modern scrapers
 	'scan4mail',
-	'scrapy', // Python scraping framework
+	'scrapy',            // Python scraping framework
 	'screaming frog',
-	'searchbot admin@google.com',
-	'SemanticScholarBot',
-	'semrush', // SEO crawler and scraper. Changed from SEMRushBot to SiteAuditBot in 2025. semrush.com/bot.html is still in the user agent.
-	'seokicks', // German SEO crawler
-	'SERanking', // SEO crawler
-	'serpstatbot', // SerpStat SEO crawler
-	'seznambot',
-	'shablastbot',
-	'SiteAuditBot', // SEMRush SEO crawler (new name)
-	'SleepBot', // web scraper. seen in the wild on red poppy in 2026
-	'snap.com',
-	'snapbot',
+	'admin@google',      // "searchbot admin@google.com" spam bot
+	'semanticscholar',   // SemanticScholarBot
+	'semrush',           // SEO crawler and scraper. Changed from SEMRushBot to SiteAuditBot in 2025. semrush.com/bot.html is still in the user agent.
+	'seokicks',          // German SEO crawler
+	'seranking',         // SERanking; SEO crawler
+	'serpstat',          // SerpstatBot; SerpStat SEO crawler
+	'seznam',            // SeznamBot
+	'shablast',          // ShablastBot
+	'siteaudit',         // SiteAuditBot; SEMRush SEO crawler (new name)
+	'sleepbot',          // web scraper. seen in the wild on red poppy in 2026
+	'snap',              // snap.com + snapbot (merged)
 	'sogou',
-	'sohu agent',
-	'sqlmap', // SQL injection attack tool
-	'timpibot',
+	'sohu',              // sohu agent
+	'sqlmap',            // SQL injection attack tool
+	'timpi',             // timpibot
 	'trackback',
-	'trendictionbot',
+	'trendiction',       // trendictionbot
 	'turnitin',
-	'tweetmemebot',
-	'vadixbot',
+	'tweetmeme',         // tweetmemebot
+	'vadix',             // vadixbot
 	'webemailextrac',
 	'webvulncrawl',
 	'yandex',
-	'zgrab', // Go-based attack scanner
+	'zgrab',             // Go-based attack scanner
 );
 
-$aggressive_crawlers = array_map(
-	function ( $crawler ) {
-		return '(lower(http.user_agent) contains "' . $crawler . '")';
-	},
-	$aggressive_crawlers
+$aggressive_crawlers = implode(
+	' or ',
+	array_map(
+		function ( $crawler ) {
+			return '(lower(http.user_agent) contains "' . $crawler . '")';
+		},
+		$aggressive_crawlers
+	)
 );
-$aggressive_crawlers = implode( ' or ', $aggressive_crawlers );
 
 // TOR
 $tor = '(ip.src.country eq "T1")';
