@@ -243,53 +243,53 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 				<h3>New Ruleset to Apply: <?php echo htmlspecialchars( $rulesets[ $ruleset_name ]['description'] ); ?></h3>
 
 				<?php foreach ( $zones_data as $zone_data ) : ?>
-<?php if ( ! empty( $zone_data['existing_rules'] ) || ! empty( $zone_data['custom_rules'] ) ) : ?>
-					<?php
-					// Create a map of new rules by description for comparison
-					$new_rules_map = array();
-					foreach ( $new_rules as $new_rule ) {
-						$desc                   = $new_rule['description'] ?? '';
-						$new_rules_map[ $desc ] = $new_rule;
-					}
+					<?php if ( ! empty( $zone_data['existing_rules'] ) || ! empty( $zone_data['custom_rules'] ) ) : ?>
+						<?php
+						// Create a map of new rules by description for comparison
+						$new_rules_map = array();
+						foreach ( $new_rules as $new_rule ) {
+							$desc                   = $new_rule['description'] ?? '';
+							$new_rules_map[ $desc ] = $new_rule;
+						}
 
-					// Create a map of existing API-managed rules by description
-					$existing_rules_map = array();
-					foreach ( $zone_data['existing_rules'] as $existing_rule ) {
-						$desc                        = $existing_rule['description'] ?? '';
-						$existing_rules_map[ $desc ] = $existing_rule;
-					}
+						// Create a map of existing API-managed rules by description
+						$existing_rules_map = array();
+						foreach ( $zone_data['existing_rules'] as $existing_rule ) {
+							$desc                        = $existing_rule['description'] ?? '';
+							$existing_rules_map[ $desc ] = $existing_rule;
+						}
 
-					// Count changes (API-managed rules only; [CUSTOM] rules are always preserved)
-					$matching_count  = 0;
-					$changing_count  = 0;
-					$removing_count  = 0;
-					$adding_count    = 0;
-					$preserved_count = count( $zone_data['custom_rules'] );
+						// Count changes (API-managed rules only; [CUSTOM] rules are always preserved)
+						$matching_count  = 0;
+						$changing_count  = 0;
+						$removing_count  = 0;
+						$adding_count    = 0;
+						$preserved_count = count( $zone_data['custom_rules'] );
 
-					foreach ( $zone_data['existing_rules'] as $existing_rule ) {
-						$desc = $existing_rule['description'] ?? '';
-						if ( isset( $new_rules_map[ $desc ] ) ) {
-							$is_identical = (
-								( $existing_rule['action'] ?? '' ) === ( $new_rules_map[ $desc ]['action'] ?? '' ) &&
-								( $existing_rule['expression'] ?? '' ) === ( $new_rules_map[ $desc ]['expression'] ?? '' )
-							);
-							if ( $is_identical ) {
-								$matching_count++;
+						foreach ( $zone_data['existing_rules'] as $existing_rule ) {
+							$desc = $existing_rule['description'] ?? '';
+							if ( isset( $new_rules_map[ $desc ] ) ) {
+								$is_identical = (
+									( $existing_rule['action'] ?? '' ) === ( $new_rules_map[ $desc ]['action'] ?? '' ) &&
+									( $existing_rule['expression'] ?? '' ) === ( $new_rules_map[ $desc ]['expression'] ?? '' )
+								);
+								if ( $is_identical ) {
+									$matching_count++;
+								} else {
+									$changing_count++;
+								}
 							} else {
-								$changing_count++;
+								$removing_count++;
 							}
-						} else {
-							$removing_count++;
 						}
-					}
 
-					foreach ( $new_rules as $new_rule ) {
-						$desc = $new_rule['description'] ?? '';
-						if ( ! isset( $existing_rules_map[ $desc ] ) ) {
-							$adding_count++;
+						foreach ( $new_rules as $new_rule ) {
+							$desc = $new_rule['description'] ?? '';
+							if ( ! isset( $existing_rules_map[ $desc ] ) ) {
+								$adding_count++;
+							}
 						}
-					}
-					?>
+						?>
 					<div class="zone-rules-comparison">
 						<h4><?php echo htmlspecialchars( $zone_data['name'] ); ?></h4>
 						<div class="rules-summary">
@@ -410,13 +410,13 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 										<?php endif; ?>
 									<?php endforeach; ?>
 
-									<?php
-									// Show new rules that don't exist yet
-									foreach ( $new_rules as $new_rule ) :
-										$desc = $new_rule['description'] ?? 'Unnamed Rule';
-										if ( ! isset( $existing_rules_map[ $desc ] ) ) :
-											$new_action = $new_rule['action'] ?? 'N/A';
-											?>
+														<?php
+														// Show new rules that don't exist yet
+														foreach ( $new_rules as $new_rule ) :
+															$desc = $new_rule['description'] ?? 'Unnamed Rule';
+															if ( ! isset( $existing_rules_map[ $desc ] ) ) :
+																$new_action = $new_rule['action'] ?? 'N/A';
+																?>
 											<tr class="rule-adding">
 												<td class="rule-status">
 													<span class="status-badge status-adding">+ Add</span>
@@ -425,15 +425,15 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 												<td class="rule-action"><em>—</em></td>
 												<td class="rule-action"><?php echo htmlspecialchars( $new_action ); ?></td>
 											</tr>
-										<?php endif; ?>
-									<?php endforeach; ?>
+															<?php endif; ?>
+														<?php endforeach; ?>
 
-									<?php
-									// Show [CUSTOM] rules — always preserved, never touched by the API apply.
-									foreach ( $zone_data['custom_rules'] as $custom_rule ) :
-										$desc          = $custom_rule['description'] ?? 'Unnamed Rule';
-										$custom_action = $custom_rule['action'] ?? 'N/A';
-										?>
+														<?php
+														// Show [CUSTOM] rules — always preserved, never touched by the API apply.
+														foreach ( $zone_data['custom_rules'] as $custom_rule ) :
+															$desc          = $custom_rule['description'] ?? 'Unnamed Rule';
+															$custom_action = $custom_rule['action'] ?? 'N/A';
+															?>
 										<tr class="rule-preserved">
 											<td class="rule-status">
 												<span class="status-badge status-preserved">⊙ Preserved</span>
@@ -442,11 +442,11 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 											<td class="rule-action"><?php echo htmlspecialchars( $custom_action ); ?></td>
 											<td class="rule-action"><?php echo htmlspecialchars( $custom_action ); ?></td>
 										</tr>
-									<?php endforeach; ?>
+														<?php endforeach; ?>
 								</tbody>
 							</table>
 						</div>
-					<?php endif; ?>
+										<?php endif; ?>
 				<?php endforeach; ?>
 
 				<div class="confirmation-actions">
