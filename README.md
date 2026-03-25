@@ -37,3 +37,41 @@ All configurations are set in config.php and should never be checked in to git. 
 * Backup/Restore system: backup existing rules to a file (probably json) and allow restoring from backup files.
 * Group/Label domain checkboxes with Account name above them.
 * Event logging - keep a record of what domain was updated with what ruleset when.
+
+## Cloudflare Free Tier Rule Expression Limits
+
+### The 4096-character limit
+
+Cloudflare's free tier enforces a **4096-character maximum** on each custom rule expression. The `$aggressive_crawlers` rule in `rules.php` is the one most likely to approach this limit as new bots are added.
+
+### What is and isn't available on the free tier
+
+| Feature | Free | Pro | Business/WAF Advanced |
+|---|---|---|---|
+| `contains` operator | ✅ | ✅ | ✅ |
+| `lower()` function | ✅ | ✅ | ✅ |
+| `matches` operator (regex) | ❌ | ❌ | ✅ |
+
+**Do not use `matches` / regex** — it requires Business or WAF Advanced and will error with: `not entitled: the use of operator Matches is not allowed`.
+
+### How the crawler list is kept under the limit
+
+- Each entry uses `(lower(http.user_agent) contains "string")` — `lower()` makes matching case-insensitive without needing `matches`.
+- Entries in the array are **all lowercase** — `lower()` handles the case conversion at match time.
+- Strings are shortened where it's safe to do so (e.g. `tweetmemebot` → `tweetmeme`, `dataforseobot` → `dataforseo`, `snap.com` + `snapbot` → `snap`). Only shorten when the shorter string is still unique and won't cause false positives.
+- **Never shorten to a generic word** that could match real browsers or services (e.g. do NOT shorten `google-extended` to `google` — that would block Googlebot).
+- The `admin@google` entry matches `searchbot admin@google.com` spam — the shorter form is safe and unique.
+- Entries with URLs in their user agent string (e.g. `gptbot` contains `openai.com/gptbot`) are safe to use the short form because `lower()` will catch both the name and the url.
+
+### Checking the current expression length
+
+```bash
+cd /path/to/cloudflare.localhost
+php -r 'include "rules.php"; echo "Length: " . strlen($aggressive_crawlers) . "\n";'
+```
+
+The target is to stay under **4096 characters**. As of the last update the expression is ~3983 chars, leaving ~113 chars of headroom.
+
+### Adding new crawlers
+
+When adding new entries, run the length check above after adding. If over 4096, shorten an existing entry or remove one that has low value.
