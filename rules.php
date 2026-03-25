@@ -352,6 +352,8 @@ $wp_path_strings = array(
 	'/.htaccess',       // Apache config probe
 	'.bak',             // backup file probes
 	'.sql',             // database dump exposure
+	'wp/v2/users',      // WordPress REST API user enumeration probe
+	'?=author',         // WordPress user enumeration probe via query string
 );
 
 $wp_paths = array_map(
