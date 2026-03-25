@@ -514,6 +514,33 @@ $squarecandy_rules_pro = array(
 	),
 );
 
+$squarecandy_rules_drupal = array(
+	'good_actors_allow'       => array(
+		'description'       => 'Good Actors Allow',
+		'expression'        => $allow_expression_free,
+		'action'            => 'skip',
+		'action_parameters' => array(
+			'ruleset'  => 'current',
+			'phases'   => array( 'http_ratelimit', 'http_request_sbfm', 'http_request_firewall_managed' ),
+			'products' => array( 'uaBlock', 'zoneLockdown', 'waf', 'rateLimit', 'bic', 'hot', 'securityLevel' ),
+		),
+	),
+	'block_paths'             => array(
+		'description' => 'Block WP Paths, AI Crawlers',
+		'expression'  => $wp_paths . ' or ' . $ai_crawlers . ' or ' . $fu_waf,
+		'action'      => 'block',
+	),
+	'block_crawlers'          => array(
+		'description' => 'Block Aggressive Crawlers',
+		'expression'  => $aggressive_crawlers,
+		'action'      => 'block',
+	),
+	'managed_challenge_hosts' => array(
+		'description' => 'Managed Challenge Web Hosts, Cloud Providers, TOR',
+		'expression'  => $challenge_asns . ' or ' . $tor . ' or ' . $fake_chrome . ' or ' . $login_protection,
+		'action'      => 'managed_challenge',
+	),
+);
 
 // depreciated... keeping for reference.
 $presswizards_rules = array(
@@ -561,5 +588,9 @@ $rulesets = array(
 	'squarecandy_rules_pro'       => array(
 		'description' => 'Square Candy PRO Rules 2026-03',
 		'rules'       => $squarecandy_rules_pro,
+	),
+	'squarecandy_rules_drupal'    => array(
+		'description' => 'Square Candy Drupal Rules 2026-03',
+		'rules'       => $squarecandy_rules_drupal,
 	),
 );
