@@ -205,6 +205,7 @@ $aggressive_crawlers_free = array(
 	'anthropic-ai',      // Anthropic AI crawler
 	'applebot-extended', // Apple AI training crawler (distinct from regular Applebot; ignores crawl-delay)
 	'awariobot',
+	'baidu',             // Baidu is a major Chinese search engine with aggressive crawling behavior
 	'barkrowl',          // barkrowler
 	'br-crawl',          // br-crawler
 	'brightdata',        // Bright Data scraping infrastructure; rates set by paying clients, often extremely aggressive
@@ -295,6 +296,7 @@ $aggressive_crawlers_pro_extra = array(
 	'omgili',         // web intelligence crawler
 	'orbbot',         // aggressive proxy bot
 	'wp-cli',         // should never come from outside the server
+	'newspaper',      // content scraper, seen on Orion 2026-03
 );
 
 // Combined list: used for nginx rules and the pro CF rule
