@@ -617,6 +617,12 @@ textarea {
 	border: 1px solid #F44336;
 }
 
+.rule-stat-preserved {
+	background: #f3e5f5;
+	color: #4a148c;
+	border: 1px solid #9C27B0;
+}
+
 .rules-comparison-table {
 	width: 100%;
 	background: #fff;
@@ -687,6 +693,11 @@ textarea {
 	color: #c62828;
 }
 
+.status-preserved {
+	background: #f3e5f5;
+	color: #6a1b9a;
+}
+
 .rule-matching {
 	background: #f1f8f4;
 }
@@ -701,6 +712,10 @@ textarea {
 
 .rule-removing {
 	background: #fff5f5;
+}
+
+.rule-preserved {
+	background: #fdf5ff;
 }
 
 .existing-rules-list {

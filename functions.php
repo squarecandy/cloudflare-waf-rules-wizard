@@ -91,6 +91,21 @@ function pw_get_cloudflare_zones( $account_ids, $api_key, $api_email ) {
 	return $all_zones;
 }
 
+// Returns true if a rule description ends with [CUSTOM] (case-insensitive).
+function pw_is_custom_rule( $rule ) {
+	$desc = isset( $rule['description'] ) ? trim( $rule['description'] ) : '';
+	return (bool) preg_match( '/\[custom\]$/i', $desc );
+}
+
+// Strips Cloudflare read-only fields from a rule so it can be re-submitted in a PUT payload.
+function pw_strip_readonly_rule_fields( $rule ) {
+	$readonly_fields = array( 'id', 'version', 'last_updated', 'ref', 'last_updated_index' );
+	foreach ( $readonly_fields as $field ) {
+		unset( $rule[ $field ] );
+	}
+	return $rule;
+}
+
 function pw_cloudflare_ruleset_manager_process_zones( $rules = array() ) {
 	$email       = CLOUDFLARE_EMAIL;
 	$api_key     = CLOUDFLARE_API_KEY;
@@ -171,7 +186,17 @@ function pw_cloudflare_ruleset_manager_process_zones( $rules = array() ) {
 			}
 		}
 
-		$response = pw_replace_ruleset( $zone_id, $ruleset_id, $headers, $rules );
+		// Preserve any existing [CUSTOM] rules by prepending them before the API-managed rules.
+		$existing_rules  = pw_get_existing_waf_rules( $zone_id, $api_key, $email );
+		$preserved_rules = array();
+		foreach ( $existing_rules as $existing_rule ) {
+			if ( pw_is_custom_rule( $existing_rule ) ) {
+				$preserved_rules[] = pw_strip_readonly_rule_fields( $existing_rule );
+			}
+		}
+		$merged_rules = array_values( array_merge( $preserved_rules, $rules ) );
+
+		$response = pw_replace_ruleset( $zone_id, $ruleset_id, $headers, $merged_rules );
 		if ( isset( $response['success'] ) && $response['success'] ) {
 			echo '<div class="notice notice-success"><p>Successfully updated ruleset for domain: ' . $zone_name . '</p></div>';
 		} else {
