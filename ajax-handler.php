@@ -306,57 +306,6 @@ if ( $setting === 'fail2ban_create_token' ) {
 	exit;
 }
 
-if ( $setting === 'fail2ban_check_waf_status' ) {
-	$account_id = isset( $_POST['account_id'] ) ? trim( $_POST['account_id'] ) : '';
-
-	if ( ! in_array( $account_id, CLOUDFLARE_ACCOUNT_IDS, true ) ) {
-		echo json_encode(
-			array(
-				'success' => false,
-				'message' => 'Invalid account ID',
-			)
-		);
-		exit;
-	}
-
-	$zones        = pw_get_cloudflare_zones( array( $account_id ), CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL );
-	$zone_results = array();
-	foreach ( $zones as $zone ) {
-		$zone_results[] = array(
-			'zone_id'   => $zone['id'],
-			'zone_name' => $zone['name'],
-			'has_rule'  => pw_get_fail2ban_waf_status( $zone['id'], CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL ),
-		);
-	}
-
-	echo json_encode(
-		array(
-			'success' => true,
-			'zones'   => $zone_results,
-		)
-	);
-	exit;
-}
-
-if ( $setting === 'fail2ban_create_waf_rule' ) {
-	$zone_id = isset( $_POST['zone_id'] ) ? trim( $_POST['zone_id'] ) : '';
-
-	// Zone IDs are 32 hex characters — validate format to prevent injection.
-	if ( ! preg_match( '/^[0-9a-f]{32}$/', $zone_id ) ) {
-		echo json_encode(
-			array(
-				'success' => false,
-				'message' => 'Invalid zone ID format',
-			)
-		);
-		exit;
-	}
-
-	$result = pw_create_fail2ban_waf_rule( $zone_id, CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL );
-	echo json_encode( $result );
-	exit;
-}
-
 if ( $setting === 'fail2ban_download_config' ) {
 	$server_name = isset( $_POST['server_name'] ) ? trim( $_POST['server_name'] ) : '';
 

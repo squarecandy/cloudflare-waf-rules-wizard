@@ -394,6 +394,11 @@ $fake_chrome = '((' . $fake_chrome_ua_check . ') and not any(http.request.header
 
 $fu_waf = '(http.request.full_uri contains "FUCKYOUWAF")';
 
+// Fail2ban blocked IPs — bans enforced by the server-side fail2ban integration.
+// List name comes from FAIL2BAN_LIST_ID in config.php (default: cf_fail2ban_blocked).
+$fail2ban_list_id = defined( 'FAIL2BAN_LIST_ID' ) ? FAIL2BAN_LIST_ID : 'cf_fail2ban_blocked';
+$fail2ban_block   = '(ip.src in $' . $fail2ban_list_id . ')';
+
 $login_paths = array(
 	'/wp-login.php',
 	'/user',
@@ -439,8 +444,8 @@ $squarecandy_rules_free = array(
 		),
 	),
 	'block_paths'             => array(
-		'description' => 'Block WP Paths, Druapl, AI Crawlers',
-		'expression'  => $wp_paths . ' or ' . $drupal . ' or ' . $ai_crawlers . ' or ' . $fu_waf,
+		'description' => 'Block WP Paths, Drupal, AI Crawlers, Fail2ban',
+		'expression'  => $wp_paths . ' or ' . $drupal . ' or ' . $ai_crawlers . ' or ' . $fu_waf . ' or ' . $fail2ban_block,
 		'action'      => 'block',
 	),
 	'block_crawlers'          => array(
@@ -470,8 +475,8 @@ $squarecandy_rules_pro = array(
 		),
 	),
 	'block_wp_paths'          => array(
-		'description' => 'Block WP Paths',
-		'expression'  => $wp_paths . ' or ' . $fu_waf,
+		'description' => 'Block WP Paths, Fail2ban',
+		'expression'  => $wp_paths . ' or ' . $fu_waf . ' or ' . $fail2ban_block,
 		'action'      => 'block',
 	),
 	'block_drupal_paths'      => array(
@@ -528,8 +533,8 @@ $squarecandy_rules_drupal = array(
 		),
 	),
 	'block_paths'             => array(
-		'description' => 'Block WP Paths, AI Crawlers',
-		'expression'  => $wp_paths . ' or ' . $ai_crawlers . ' or ' . $fu_waf,
+		'description' => 'Block WP Paths, AI Crawlers, Fail2ban',
+		'expression'  => $wp_paths . ' or ' . $ai_crawlers . ' or ' . $fu_waf . ' or ' . $fail2ban_block,
 		'action'      => 'block',
 	),
 	'block_crawlers'          => array(
