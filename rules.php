@@ -389,6 +389,37 @@ $fake_chrome = '((' . $fake_chrome_ua_check . ') and not any(http.request.header
 
 $fu_waf = '(http.request.full_uri contains "FUCKYOUWAF")';
 
+$login_paths = array(
+	'/wp-login.php',
+	'/user',
+	'/login/',
+);
+
+$login_action_exclusions = array(
+	'action=logout',
+	'action=postpass',
+);
+
+$login_exclusion_expr = implode(
+	' or ',
+	array_map(
+		function ( $exclusion ) {
+			return 'http.request.uri.query contains "' . $exclusion . '"';
+		},
+		$login_action_exclusions
+	)
+);
+
+$login_protection = '(' . implode(
+	' or ',
+	array_map(
+		function ( $path ) use ( $login_exclusion_expr ) {
+			return '(http.request.uri.path eq "' . $path . '" and not (' . $login_exclusion_expr . '))';
+		},
+		$login_paths
+	)
+) . ')';
+
 ///// End Rules snippets /////
 
 $squarecandy_rules_free = array(
@@ -414,12 +445,7 @@ $squarecandy_rules_free = array(
 	),
 	'managed_challenge_hosts' => array(
 		'description' => 'Managed Challenge Web Hosts, Cloud Providers, TOR',
-		'expression'  => $challenge_asns . ' or ' . $tor . ' or ' . $fake_chrome,
-		'action'      => 'managed_challenge',
-	),
-	'login_protection'        => array(
-		'description' => 'Login Protection',
-		'expression'  => '(http.request.uri.path contains "wp-login.php" and not http.request.uri.query contains "action=logout" and not http.request.uri.query contains "action=postpass")',
+		'expression'  => $challenge_asns . ' or ' . $tor . ' or ' . $fake_chrome . ' or ' . $login_protection,
 		'action'      => 'managed_challenge',
 	),
 );
@@ -475,7 +501,7 @@ $squarecandy_rules_pro = array(
 	),
 	'login_protection'        => array(
 		'description' => 'Login Protection',
-		'expression'  => '(http.request.uri.path contains "wp-login.php" and not http.request.uri.query contains "action=logout")',
+		'expression'  => $login_protection,
 		'action'      => 'managed_challenge',
 	),
 	'fake_chrome'             => array(
