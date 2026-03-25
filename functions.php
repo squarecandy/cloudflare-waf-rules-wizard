@@ -720,6 +720,345 @@ function pw_disable_zone_proxy( $zone_id, $api_key, $api_email ) {
 	);
 }
 
+// =============================================================================
+// Fail2ban Integration Functions
+// =============================================================================
+
+// Get the account name for a Cloudflare account ID.
+// Return a URL-safe slug for a Cloudflare account based on its nickname in CLOUDFLARE_ACCOUNT_NAMES.
+// Falls back to "account{N}" if no name is configured.
+function pw_get_account_slug( $account_idx ) {
+	$names = defined( 'CLOUDFLARE_ACCOUNT_NAMES' ) ? CLOUDFLARE_ACCOUNT_NAMES : array();
+	$name  = isset( $names[ $account_idx ] ) ? $names[ $account_idx ] : '';
+	if ( '' === $name ) {
+		return 'account' . ( (int) $account_idx + 1 );
+	}
+	$slug = strtolower( $name );
+	$slug = preg_replace( '/[^a-z0-9]+/', '-', $slug );
+	$slug = trim( $slug, '-' );
+	return $slug;
+}
+
+// Get all IP Lists for a Cloudflare account.
+function pw_get_account_lists( $account_id, $api_key, $api_email ) {
+	$headers  = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+	$url      = "https://api.cloudflare.com/client/v4/accounts/{$account_id}/rules/lists";
+	$response = pw_make_curl_request( $url, 'GET', $headers );
+
+	if ( isset( $response['success'] ) && $response['success'] && isset( $response['result'] ) ) {
+		return $response['result'];
+	}
+	return array();
+}
+
+// Check whether the fail2ban IP list exists in a Cloudflare account.
+function pw_fail2ban_list_exists( $account_id, $api_key, $api_email ) {
+	$list_id = defined( 'FAIL2BAN_LIST_ID' ) ? FAIL2BAN_LIST_ID : 'cf_fail2ban_blocked';
+	$lists   = pw_get_account_lists( $account_id, $api_key, $api_email );
+	foreach ( $lists as $list ) {
+		if ( isset( $list['name'] ) && $list['name'] === $list_id ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// Create the fail2ban IP list in a Cloudflare account.
+function pw_create_account_list( $account_id, $api_key, $api_email ) {
+	$list_id = defined( 'FAIL2BAN_LIST_ID' ) ? FAIL2BAN_LIST_ID : 'cf_fail2ban_blocked';
+	$headers = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+	$url     = "https://api.cloudflare.com/client/v4/accounts/{$account_id}/rules/lists";
+	$data    = array(
+		'name'        => $list_id,
+		'description' => 'IPs banned by fail2ban \u2014 managed automatically by cloudflare-fail2ban',
+		'kind'        => 'ip',
+	);
+
+	$response = pw_make_curl_request( $url, 'POST', $headers, $data );
+
+	if ( isset( $response['success'] ) && $response['success'] ) {
+		return array( 'success' => true );
+	}
+	$error = isset( $response['errors'][0]['message'] ) ? $response['errors'][0]['message'] : 'Unknown error';
+	return array(
+		'success' => false,
+		'message' => $error,
+	);
+}
+
+// Discover the Cloudflare permission group ID for "Account Filter Lists Write".
+// This avoids hardcoding a UUID that could change across API versions.
+function pw_get_fail2ban_permission_group_id( $api_key, $api_email ) {
+	$headers  = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+	$url      = 'https://api.cloudflare.com/client/v4/user/tokens/permission_groups';
+	$response = pw_make_curl_request( $url, 'GET', $headers );
+
+	if ( empty( $response['result'] ) ) {
+		return null;
+	}
+
+	foreach ( $response['result'] as $group ) {
+		$name   = strtolower( $group['name'] ?? '' );
+		$scopes = $group['scopes'] ?? array();
+
+		$is_account_scoped = in_array( 'com.cloudflare.api.account', $scopes, true );
+		$is_filter_lists   = strpos( $name, 'filter' ) !== false || strpos( $name, 'lists' ) !== false;
+		$is_write          = strpos( $name, 'write' ) !== false || strpos( $name, 'edit' ) !== false;
+
+		if ( $is_account_scoped && $is_filter_lists && $is_write ) {
+			return $group['id'];
+		}
+	}
+	return null;
+}
+
+/**
+ * Create a limited-scope Cloudflare API token for fail2ban (Account Filter Lists: Edit only).
+ *
+ * SECURITY: The token value is NEVER returned to the caller. It is written directly
+ * to disk (chmod 600) and the in-memory variable is immediately unset.
+ * Response contains only a boolean success and the file path — never the token value.
+ *
+ * @param string $account_id  Cloudflare account ID to scope the token to.
+ * @param int    $account_idx Zero-based index in CLOUDFLARE_ACCOUNT_IDS (determines filename).
+ * @param string $api_key     Global Cloudflare API key.
+ * @param string $api_email   Cloudflare account email.
+ * @return array{success: bool, message?: string, filepath?: string}
+ */
+function pw_create_fail2ban_token( $account_id, $account_idx, $api_key, $api_email ) {
+	$token_path = defined( 'FAIL2BAN_TOKEN_PATH' ) ? FAIL2BAN_TOKEN_PATH : '';
+	if ( empty( $token_path ) ) {
+		return array(
+			'success' => false,
+			'message' => 'FAIL2BAN_TOKEN_PATH is not configured',
+		);
+	}
+
+	$num        = (int) $account_idx + 1;
+	$slug       = pw_get_account_slug( $account_idx );
+	$token_file = rtrim( $token_path, '/' ) . '/cloudflare-api-key-' . $slug;
+
+	$perm_group_id = pw_get_fail2ban_permission_group_id( $api_key, $api_email );
+	if ( ! $perm_group_id ) {
+		return array(
+			'success' => false,
+			'message' => 'Could not find Account Filter Lists Write permission group via API',
+		);
+	}
+
+	$headers = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+	$data    = array(
+		'name'     => 'fail2ban-' . $slug,
+		'policies' => array(
+			array(
+				'effect'            => 'allow',
+				'resources'         => array(
+					"com.cloudflare.api.account.{$account_id}" => '*',
+				),
+				'permission_groups' => array(
+					array( 'id' => $perm_group_id ),
+				),
+			),
+		),
+	);
+
+	$url      = 'https://api.cloudflare.com/client/v4/user/tokens';
+	$response = pw_make_curl_request( $url, 'POST', $headers, $data );
+
+	if ( ! isset( $response['success'] ) || ! $response['success'] ) {
+		$error = isset( $response['errors'][0]['message'] ) ? $response['errors'][0]['message'] : 'Token creation failed';
+		return array(
+			'success' => false,
+			'message' => $error,
+		);
+	}
+
+	$token_value = $response['result']['value'] ?? null;
+	if ( empty( $token_value ) ) {
+		return array(
+			'success' => false,
+			'message' => 'Token created but value was not returned by API',
+		);
+	}
+
+	// Ensure the directory exists with tight permissions before writing.
+	$dir = dirname( $token_file );
+	if ( ! is_dir( $dir ) ) {
+		mkdir( $dir, 0700, true );
+	}
+
+	// Write token to disk, then immediately discard the value from memory.
+	$bytes_written = file_put_contents( $token_file, $token_value );
+	unset( $token_value ); // SECURITY: value must not linger in memory.
+
+	if ( false === $bytes_written ) {
+		return array(
+			'success' => false,
+			'message' => 'Token created in Cloudflare but could not write to ' . $token_file . '. Check directory permissions.',
+		);
+	}
+
+	chmod( $token_file, 0600 );
+	return array(
+		'success'  => true,
+		'filepath' => $token_file,
+	);
+}
+
+// Check whether a zone's WAF ruleset contains the fail2ban block rule.
+function pw_get_fail2ban_waf_status( $zone_id, $api_key, $api_email ) {
+	$rules = pw_get_existing_waf_rules( $zone_id, $api_key, $api_email );
+	foreach ( $rules as $rule ) {
+		if ( stripos( $rule['description'] ?? '', '[fail2ban]' ) !== false ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Add the fail2ban IP block rule as the FIRST (highest-priority) rule in a zone's WAF ruleset.
+ *
+ * Follows the [CUSTOM] preservation pattern: existing rules are preserved and
+ * the fail2ban rule is prepended. If the rule already exists it is a no-op.
+ * Creates the WAF ruleset if none exists yet.
+ *
+ * @param string $zone_id   Cloudflare zone ID.
+ * @param string $api_key   Global Cloudflare API key.
+ * @param string $api_email Cloudflare account email.
+ * @return array{success: bool, message: string}
+ */
+function pw_create_fail2ban_waf_rule( $zone_id, $api_key, $api_email ) {
+	$list_id = defined( 'FAIL2BAN_LIST_ID' ) ? FAIL2BAN_LIST_ID : 'cf_fail2ban_blocked';
+	$headers = array(
+		"X-Auth-Email: $api_email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+
+	// Locate or create the zone's custom WAF ruleset.
+	$rulesets_url = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets";
+	$response     = pw_make_curl_request( $rulesets_url, 'GET', $headers );
+
+	$ruleset_id = null;
+	if ( ! empty( $response['result'] ) ) {
+		foreach ( $response['result'] as $ruleset ) {
+			if ( 'zone' === $ruleset['kind'] && 'http_request_firewall_custom' === $ruleset['phase'] ) {
+				$ruleset_id = $ruleset['id'];
+				break;
+			}
+		}
+	}
+
+	if ( ! $ruleset_id ) {
+		$create_data = array(
+			'name'  => 'Custom ruleset for http_request_firewall_custom phase',
+			'kind'  => 'zone',
+			'phase' => 'http_request_firewall_custom',
+		);
+		$create_resp = pw_make_curl_request( $rulesets_url, 'POST', $headers, $create_data );
+		if ( ! isset( $create_resp['result']['id'] ) ) {
+			return array(
+				'success' => false,
+				'message' => 'Failed to create WAF ruleset',
+			);
+		}
+		$ruleset_id = $create_resp['result']['id'];
+	}
+
+	// Bail early if the fail2ban rule already exists.
+	$existing_rules = pw_get_existing_waf_rules( $zone_id, $api_key, $api_email );
+	foreach ( $existing_rules as $rule ) {
+		if ( stripos( $rule['description'] ?? '', '[fail2ban]' ) !== false ) {
+			return array(
+				'success' => true,
+				'message' => 'Rule already exists',
+			);
+		}
+	}
+
+	// Strip Cloudflare read-only fields from existing rules so they survive a PUT.
+	$clean_existing = array_map( 'pw_strip_readonly_rule_fields', $existing_rules );
+
+	// Prepend the fail2ban rule so it evaluates first (highest priority).
+	$fail2ban_rule = array(
+		'description' => 'Block Fail2ban Banned IPs [fail2ban]',
+		'expression'  => 'ip.src in $' . $list_id,
+		'action'      => 'block',
+	);
+	$merged_rules  = array_values( array_merge( array( $fail2ban_rule ), $clean_existing ) );
+
+	$put_url  = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets/{$ruleset_id}";
+	$put_resp = pw_make_curl_request( $put_url, 'PUT', $headers, array( 'rules' => $merged_rules ) );
+
+	if ( isset( $put_resp['success'] ) && $put_resp['success'] ) {
+		return array(
+			'success' => true,
+			'message' => 'Rule deployed successfully',
+		);
+	}
+
+	$error = isset( $put_resp['errors'][0]['message'] ) ? $put_resp['errors'][0]['message'] : 'Unknown error';
+	return array(
+		'success' => false,
+		'message' => $error,
+	);
+}
+
+/**
+ * Generate the cloudflare-fail2ban-config shell file content for a given server.
+ *
+ * SECURITY: This output contains account IDs and server-side file paths ONLY.
+ * No token values are included — they reside in separate local files.
+ *
+ * @param string $server_name Human-readable server identifier (e.g. "Production").
+ * @return string Shell configuration file content.
+ */
+function pw_generate_fail2ban_config( $server_name ) {
+	$account_ids = CLOUDFLARE_ACCOUNT_IDS;
+	$list_id     = defined( 'FAIL2BAN_LIST_ID' ) ? FAIL2BAN_LIST_ID : 'cf_fail2ban_blocked';
+
+	$ids_block   = '';
+	$files_block = '';
+	foreach ( $account_ids as $idx => $account_id ) {
+		$slug       = pw_get_account_slug( $idx );
+		$ids_block .= "    \"{$account_id}\"\n";
+		// Use $HOME on the server side (expands to the user's home dir at runtime).
+		$files_block .= "    \"\$HOME/.cloudflare/cloudflare-api-key-{$slug}\"\n";
+	}
+
+	$safe_name = str_replace( array( '"', '\\', '$', '`' ), '', $server_name );
+
+	$config  = "# Cloudflare Fail2ban Configuration\n";
+	$config .= '# Generated by cloudflare.localhost on ' . gmdate( 'Y-m-d H:i:s' ) . " UTC\n";
+	$config .= "# Server: {$safe_name}\n";
+	$config .= "# Deploy to: /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-config\n\n";
+	$config .= "CLOUDFLARE_LIST_ID=\"{$list_id}\"\n\n";
+	$config .= "CLOUDFLARE_ACCOUNT_IDS=(\n{$ids_block})\n\n";
+	$config .= "CLOUDFLARE_API_KEY_FILES=(\n{$files_block})\n\n";
+	$config .= "SERVER_NAME=\"{$safe_name}\"\n";
+
+	return $config;
+}
+
+// =============================================================================
+
 // Restore proxy settings for a specific zone from backup
 function pw_restore_zone_from_backup( $zone_id, $filename, $api_key, $api_email ) {
 	$backup_dir = __DIR__ . '/backups';

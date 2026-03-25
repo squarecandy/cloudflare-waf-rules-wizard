@@ -41,8 +41,9 @@ require_once 'config.php';
 				</li>
 				<li class="<?php echo 'nginx-rules' === $current_page ? 'active' : ''; ?>">
 					<a href="index.php?page=nginx-rules">Nginx Rules</a>
-				</li>
-			</ul>
+				</li>			<li class="<?php echo 'fail2ban-setup' === $current_page ? 'active' : ''; ?>">
+				<a href="index.php?page=fail2ban-setup">Fail2ban Setup</a>
+			</li>			</ul>
 		</div>
 		<?php
 		if (
@@ -71,6 +72,8 @@ require_once 'config.php';
 			include 'proxy-status.php';
 		} elseif ( 'nginx-rules' === $current_page ) {
 			include 'nginx-rules.php';
+		} elseif ( 'fail2ban-setup' === $current_page ) {
+			include 'fail2ban-setup.php';
 		} else { // Default to WAF Rules page
 			include 'waf-rules.php';
 		}

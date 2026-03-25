@@ -219,6 +219,180 @@ if ( $setting === 'restore_zone' ) {
 	exit;
 }
 
+// --- Fail2ban Integration Actions ---
+
+if ( $setting === 'fail2ban_check_list_status' ) {
+	$account_id  = isset( $_POST['account_id'] ) ? trim( $_POST['account_id'] ) : '';
+	$account_idx = isset( $_POST['account_idx'] ) ? (int) $_POST['account_idx'] : 0;
+
+	// Validate account_id against the configured set to prevent SSRF with our global key.
+	if ( ! in_array( $account_id, CLOUDFLARE_ACCOUNT_IDS, true ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Invalid account ID',
+			)
+		);
+		exit;
+	}
+
+	$list_exists = pw_fail2ban_list_exists( $account_id, CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL );
+
+	$token_path        = defined( 'FAIL2BAN_TOKEN_PATH' ) ? FAIL2BAN_TOKEN_PATH : '';
+	$slug              = pw_get_account_slug( $account_idx );
+	$token_file        = rtrim( $token_path, '/' ) . '/cloudflare-api-key-' . $slug;
+	$token_file_exists = ! empty( $token_path ) && file_exists( $token_file );
+
+	echo json_encode(
+		array(
+			'success'           => true,
+			'list_exists'       => $list_exists,
+			'token_file_exists' => $token_file_exists,
+		)
+	);
+	exit;
+}
+
+if ( $setting === 'fail2ban_create_list' ) {
+	$account_id = isset( $_POST['account_id'] ) ? trim( $_POST['account_id'] ) : '';
+
+	if ( ! in_array( $account_id, CLOUDFLARE_ACCOUNT_IDS, true ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Invalid account ID',
+			)
+		);
+		exit;
+	}
+
+	$result = pw_create_account_list( $account_id, CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL );
+	echo json_encode( $result );
+	exit;
+}
+
+if ( $setting === 'fail2ban_create_token' ) {
+	$account_id  = isset( $_POST['account_id'] ) ? trim( $_POST['account_id'] ) : '';
+	$account_idx = isset( $_POST['account_idx'] ) ? (int) $_POST['account_idx'] : 0;
+
+	if ( ! in_array( $account_id, CLOUDFLARE_ACCOUNT_IDS, true ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Invalid account ID',
+			)
+		);
+		exit;
+	}
+
+	$result = pw_create_fail2ban_token( $account_id, $account_idx, CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL );
+
+	// SECURITY: NEVER return the token value. Return only success status and file path.
+	if ( $result['success'] ) {
+		echo json_encode(
+			array(
+				'success'  => true,
+				'filepath' => $result['filepath'],
+			)
+		);
+	} else {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => $result['message'],
+			)
+		);
+	}
+	exit;
+}
+
+if ( $setting === 'fail2ban_check_waf_status' ) {
+	$account_id = isset( $_POST['account_id'] ) ? trim( $_POST['account_id'] ) : '';
+
+	if ( ! in_array( $account_id, CLOUDFLARE_ACCOUNT_IDS, true ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Invalid account ID',
+			)
+		);
+		exit;
+	}
+
+	$zones        = pw_get_cloudflare_zones( array( $account_id ), CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL );
+	$zone_results = array();
+	foreach ( $zones as $zone ) {
+		$zone_results[] = array(
+			'zone_id'   => $zone['id'],
+			'zone_name' => $zone['name'],
+			'has_rule'  => pw_get_fail2ban_waf_status( $zone['id'], CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL ),
+		);
+	}
+
+	echo json_encode(
+		array(
+			'success' => true,
+			'zones'   => $zone_results,
+		)
+	);
+	exit;
+}
+
+if ( $setting === 'fail2ban_create_waf_rule' ) {
+	$zone_id = isset( $_POST['zone_id'] ) ? trim( $_POST['zone_id'] ) : '';
+
+	// Zone IDs are 32 hex characters — validate format to prevent injection.
+	if ( ! preg_match( '/^[0-9a-f]{32}$/', $zone_id ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Invalid zone ID format',
+			)
+		);
+		exit;
+	}
+
+	$result = pw_create_fail2ban_waf_rule( $zone_id, CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL );
+	echo json_encode( $result );
+	exit;
+}
+
+if ( $setting === 'fail2ban_download_config' ) {
+	$server_name = isset( $_POST['server_name'] ) ? trim( $_POST['server_name'] ) : '';
+
+	// Validate against the configured server list to prevent arbitrary name injection.
+	$fail2ban_servers = defined( 'FAIL2BAN_SERVERS' ) ? FAIL2BAN_SERVERS : array();
+	$valid_server     = false;
+	foreach ( $fail2ban_servers as $server ) {
+		if ( isset( $server['name'] ) && $server['name'] === $server_name ) {
+			$valid_server = true;
+			break;
+		}
+	}
+
+	if ( ! $valid_server ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Invalid server name',
+			)
+		);
+		exit;
+	}
+
+	$config = pw_generate_fail2ban_config( $server_name );
+	echo json_encode(
+		array(
+			'success'  => true,
+			'config'   => $config,
+			'filename' => 'cloudflare-fail2ban-config',
+		)
+	);
+	exit;
+}
+
+// --- End Fail2ban Actions ---
+
 // For other settings, require zone_id and value
 if ( empty( $_POST['zone_id'] ) || ! isset( $_POST['value'] ) ) {
 	echo json_encode(
