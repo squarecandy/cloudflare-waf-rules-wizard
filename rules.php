@@ -361,10 +361,11 @@ $wp_paths = array_map(
 
 $wp_paths = implode( ' or ', $wp_paths );
 
-// Block General AI Crawlers and Assistant Bots
-$ai_crawlers = '(cf.verified_bot_category in {"AI Crawler" "Other" "AI Assistant"} and not http.user_agent contains "archive.org")';
-// Block OpenAI (when they actually reveal their user agent!)
-$open_ai = '(http.user_agent contains "openai.com") or (http.user_agent contains "ChatGPT")';
+// Block AI training crawlers by Cloudflare bot category.
+// "AI Assistant" is intentionally excluded — it covers chatgpt-user and claude-web (live retrieval bots
+// that drive authoritative referral traffic). Training crawlers (gptbot, claudebot, etc.) are covered
+// by $aggressive_crawlers above.
+$ai_crawlers = '(cf.verified_bot_category in {"AI Crawler" "Other"} and not http.user_agent contains "archive.org")';
 
 // Fake Google Chrome (spoofed UA: claims to be Chrome but missing sec-ch-ua client hint header)
 // Add new versions here as they appear in the wild
@@ -435,7 +436,7 @@ $squarecandy_rules_free = array(
 	),
 	'block_paths'             => array(
 		'description' => 'Block WP Paths, Druapl, AI Crawlers',
-		'expression'  => $wp_paths . ' or ' . $drupal . ' or ' . $ai_crawlers . ' or ' . $open_ai . ' or ' . $fu_waf,
+		'expression'  => $wp_paths . ' or ' . $drupal . ' or ' . $ai_crawlers . ' or ' . $fu_waf,
 		'action'      => 'block',
 	),
 	'block_crawlers'          => array(
@@ -476,7 +477,7 @@ $squarecandy_rules_pro = array(
 	),
 	'block_ai'                => array(
 		'description' => 'Block AI Crawlers',
-		'expression'  => $ai_crawlers . ' or ' . $open_ai,
+		'expression'  => $ai_crawlers,
 		'action'      => 'block',
 	),
 	'block_crawlers'          => array(
