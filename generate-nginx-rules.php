@@ -83,51 +83,15 @@ $path_regex = implode( '|', $path_regex_parts );
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 2. USER-AGENT PATTERNS  →  nginx if block
-//    Source: $aggressive_crawlers array (before the array_map transform)
+//    Source: $aggressive_crawlers_all (free + pro_extra, from rules.php)
 // ──────────────────────────────────────────────────────────────────────────────
 
-// Rebuild from the raw array defined in rules.php (before array_map transforms it).
-// We need to re-require the raw list, so we re-read the file and extract it.
-$rules_source = file_get_contents( __DIR__ . '/rules.php' );
+// $aggressive_crawlers_all is already available from the require_once above.
+$ua_entries = $aggressive_crawlers_all;
 
-// Extract the $aggressive_crawlers array literal from source
-preg_match(
-	'/\$aggressive_crawlers\s*=\s*array\s*\((.*?)\);/s',
-	$rules_source,
-	$matches
-);
-
-$ua_entries = array();
-if ( ! empty( $matches[1] ) ) {
-	// Pull out all single-quoted string values, ignore commented-out lines
-	preg_match_all( "/^\s*'([^']+)'/m", $matches[1], $string_matches );
-	foreach ( $string_matches[1] as $entry ) {
-		$entry = trim( $entry );
-		// Skip entries that are on commented-out lines
-		$ua_entries[] = $entry;
-	}
-}
-
-// Additional UA strings present in the nginx sample that aren't in the CF list
-// (either because CF's verified_bot_category catches them, or they were omitted).
-// Add here to keep the nginx ruleset independently comprehensive.
-$nginx_extra_uas = array(
-	'chatgpt-user',   // OpenAI ChatGPT browsing
-	'claude-web',     // Anthropic browser agent
-	'google-extended', // Google Bard/Gemini training
-	'imagesiftbot',   // image scraper
-	'omgili',         // web intelligence crawler
-	'orbbot',         // aggressive proxy bot
-	'freshbot',       // content scraper
-	'goodzer',
-	'jorgee',         // vulnerability scanner
-	'mozlila',        // fake Mozilla UA used by scrapers
-	'python-requests', // Python requests library
-	'curl/',          // raw curl — almost never a real user on a WP site
-	'wp-cli',         // should never come from outside the server
-);
-
-$all_ua_entries = array_unique( array_merge( $ua_entries, $nginx_extra_uas ) );
+// All entries are now maintained in rules.php ($aggressive_crawlers_free + $aggressive_crawlers_pro_extra).
+// chatgpt-user and claude-web are intentionally excluded — live retrieval bots, not training crawlers.
+$all_ua_entries = array_unique( $ua_entries );
 sort( $all_ua_entries );
 
 // Escape special nginx regex chars in UA strings (. is the main one)

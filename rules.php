@@ -187,7 +187,9 @@ $challenge_asns = '(ip.src.asnum in {' . $cloud_asns . ' ' . $web_hosts . '} and
 
 // block agressive crawlers
 
-// Uses shortened string patterns to stay under Cloudflare's 4096-char rule limit.
+// Free tier: entries are shortened where safe to stay under Cloudflare's 4096-char rule limit.
+// Move lower-priority entries to $aggressive_crawlers_pro_extra as new high-priority bots are added.
+// Pro tier gets the full combined list with no char limit.
 // `matches` (regex) requires Business/WAF Advanced — so we use `contains` (free-tier compatible).
 // NOTE: Do NOT block AI *retrieval* bots — these allow AI assistants to cite your pages as sources:
 // * chatgpt-user (ChatGPT live browsing)
@@ -195,7 +197,7 @@ $challenge_asns = '(ip.src.asnum in {' . $cloud_asns . ' ' . $web_hosts . '} and
 // * claude-web (Claude live search)
 // * perplexity-user (Perplexity retrieval)
 // These are distinct from training crawlers and drive authoritative referral traffic.
-$aggressive_crawlers = array(
+$aggressive_crawlers_free = array(
 	'email extractor',
 	'ahrefs',
 	'aiohttp',
@@ -250,6 +252,7 @@ $aggressive_crawlers = array(
 	'production bot',
 	'program shareware',
 	'python-httpx',      // Python HTTP client used in modern scrapers
+	'python-requests',   // Python requests library — classic scraper sibling of python-httpx
 	'scan4mail',
 	'scrapy',            // Python scraping framework
 	'screaming frog',
@@ -279,13 +282,43 @@ $aggressive_crawlers = array(
 	'zgrab',             // Go-based attack scanner
 );
 
+// Pro-only extras: lower-priority or less common bots. No char limit on pro tier.
+// Also used by the nginx generator via $aggressive_crawlers_all.
+// NOTE: chatgpt-user and claude-web are intentionally NOT here — see note above.
+$aggressive_crawlers_pro_extra = array(
+	'curl/',          // raw curl — almost never a real user on a WP site
+	'freshbot',       // content scraper
+	'goodzer',        // web scraper
+	'imagesiftbot',   // image scraper
+	'jorgee',         // vulnerability scanner
+	'mozlila',        // fake Mozilla UA used by scrapers
+	'omgili',         // web intelligence crawler
+	'orbbot',         // aggressive proxy bot
+	'wp-cli',         // should never come from outside the server
+);
+
+// Combined list: used for nginx rules and the pro CF rule
+$aggressive_crawlers_all = array_merge( $aggressive_crawlers_free, $aggressive_crawlers_pro_extra );
+
+// CF expression for free tier (must stay under 4096 chars — run length check after adding entries)
 $aggressive_crawlers = implode(
 	' or ',
 	array_map(
 		function ( $crawler ) {
 			return '(lower(http.user_agent) contains "' . $crawler . '")';
 		},
-		$aggressive_crawlers
+		$aggressive_crawlers_free
+	)
+);
+
+// CF expression for pro tier (no char limit — uses full combined list)
+$aggressive_crawlers_pro = implode(
+	' or ',
+	array_map(
+		function ( $crawler ) {
+			return '(lower(http.user_agent) contains "' . $crawler . '")';
+		},
+		$aggressive_crawlers_all
 	)
 );
 
@@ -422,7 +455,7 @@ $squarecandy_rules_pro = array(
 	),
 	'block_crawlers'          => array(
 		'description' => 'Block Aggressive Crawlers',
-		'expression'  => $aggressive_crawlers,
+		'expression'  => $aggressive_crawlers_pro,
 		'action'      => 'block',
 	),
 	'managed_challenge_hosts' => array(
