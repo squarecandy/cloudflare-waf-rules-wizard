@@ -767,6 +767,18 @@ function pw_fail2ban_list_exists( $account_id, $api_key, $api_email ) {
 	return false;
 }
 
+// Return the 32-char hex UUID of the fail2ban IP list for a given account, or empty string if not found.
+function pw_get_fail2ban_list_uuid( $account_id, $api_key, $api_email ) {
+	$list_id = defined( 'FAIL2BAN_LIST_ID' ) ? FAIL2BAN_LIST_ID : 'cf_fail2ban_blocked';
+	$lists   = pw_get_account_lists( $account_id, $api_key, $api_email );
+	foreach ( $lists as $list ) {
+		if ( isset( $list['name'], $list['id'] ) && $list['name'] === $list_id ) {
+			return $list['id'];
+		}
+	}
+	return '';
+}
+
 // Create the fail2ban IP list in a Cloudflare account.
 function pw_create_account_list( $account_id, $api_key, $api_email ) {
 	$list_id = defined( 'FAIL2BAN_LIST_ID' ) ? FAIL2BAN_LIST_ID : 'cf_fail2ban_blocked';
@@ -924,23 +936,31 @@ function pw_create_fail2ban_token( $account_id, $account_idx, $api_key, $api_ema
 /**
  * Generate the cloudflare-fail2ban-config shell file content for a given server.
  *
- * SECURITY: This output contains account IDs and server-side file paths ONLY.
+ * SECURITY: This output contains account IDs, server-side file paths, and list UUIDs ONLY.
  * No token values are included — they reside in separate local files.
  *
- * @param string $server_name Human-readable server identifier (e.g. "Production").
+ * @param string $server_slug FAIL2BAN_SERVERS key for the target server.
+ * @param string $server_name Human-readable server name for the config file header.
+ * @param array  $list_uuids  Map of account_id => list UUID (32-char hex), pre-fetched by caller.
  * @return string Shell configuration file content.
  */
-function pw_generate_fail2ban_config( $server_name ) {
-	$account_ids = CLOUDFLARE_ACCOUNT_IDS;
-	$list_id     = defined( 'FAIL2BAN_LIST_ID' ) ? FAIL2BAN_LIST_ID : 'cf_fail2ban_blocked';
+function pw_generate_fail2ban_config( $server_slug, $server_name, $list_uuids = array() ) {
+	$all_accounts = defined( 'CLOUDFLARE_ACCOUNTS' ) ? CLOUDFLARE_ACCOUNTS : array();
+	$list_id      = defined( 'FAIL2BAN_LIST_ID' ) ? FAIL2BAN_LIST_ID : 'cf_fail2ban_blocked';
 
 	$ids_block   = '';
 	$files_block = '';
-	foreach ( $account_ids as $idx => $account_id ) {
-		$slug       = pw_get_account_slug( $idx );
-		$ids_block .= "    \"{$account_id}\"\n";
-		// Use $HOME on the server side (expands to the user's home dir at runtime).
-		$files_block .= "    \"\$HOME/.cloudflare/cloudflare-api-key-{$slug}\"\n";
+	$uuids_block = '';
+	foreach ( $all_accounts as $idx => $account ) {
+		// Skip accounts that list servers explicitly but don't include this one.
+		if ( isset( $account['servers'] ) && ! in_array( $server_slug, $account['servers'], true ) ) {
+			continue;
+		}
+		$slug         = pw_get_account_slug( $idx );
+		$uuid         = isset( $list_uuids[ $account['id'] ] ) ? $list_uuids[ $account['id'] ] : '';
+		$ids_block   .= "    \"{$account['id']}\"\n";
+		$files_block .= "    \"/root/.cloudflare/cloudflare-api-key-{$slug}\"\n";
+		$uuids_block .= "    \"{$uuid}\"\n";
 	}
 
 	$safe_name = str_replace( array( '"', '\\', '$', '`' ), '', $server_name );
@@ -952,6 +972,9 @@ function pw_generate_fail2ban_config( $server_name ) {
 	$config .= "CLOUDFLARE_LIST_ID=\"{$list_id}\"\n\n";
 	$config .= "CLOUDFLARE_ACCOUNT_IDS=(\n{$ids_block})\n\n";
 	$config .= "CLOUDFLARE_API_KEY_FILES=(\n{$files_block})\n\n";
+	$config .= "# Pre-resolved list UUIDs — Cloudflare API URLs require the hex UUID, not the name.\n";
+	$config .= "# Regenerate this config if you recreate a list (UUID changes).\n";
+	$config .= "CLOUDFLARE_LIST_UUIDS=(\n{$uuids_block})\n\n";
 	$config .= "SERVER_NAME=\"{$safe_name}\"\n";
 
 	return $config;

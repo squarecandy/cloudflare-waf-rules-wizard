@@ -311,15 +311,19 @@ if ( $setting === 'fail2ban_download_config' ) {
 
 	// Validate against the configured server list to prevent arbitrary name injection.
 	$fail2ban_servers = defined( 'FAIL2BAN_SERVERS' ) ? FAIL2BAN_SERVERS : array();
-	$valid_server     = false;
-	foreach ( $fail2ban_servers as $server ) {
+	$matched_server   = null;
+	$matched_slug     = '';
+	foreach ( $fail2ban_servers as $slug => $server ) {
 		if ( isset( $server['name'] ) && $server['name'] === $server_name ) {
-			$valid_server = true;
+			$matched_server = $server;
+			$matched_slug   = $slug;
 			break;
 		}
 	}
 
-	if ( ! $valid_server ) {
+	// Fetch the list UUID for each account on this server — cached in the config so scripts
+	// don't need an extra API call per ban event.
+	if ( null === $matched_server ) {
 		echo json_encode(
 			array(
 				'success' => false,
@@ -329,12 +333,24 @@ if ( $setting === 'fail2ban_download_config' ) {
 		exit;
 	}
 
-	$config = pw_generate_fail2ban_config( $server_name );
+	$all_accounts = defined( 'CLOUDFLARE_ACCOUNTS' ) ? CLOUDFLARE_ACCOUNTS : array();
+	$list_uuids   = array();
+	foreach ( $all_accounts as $account ) {
+		if ( isset( $account['servers'] ) && ! in_array( $matched_slug, $account['servers'], true ) ) {
+			continue;
+		}
+		$uuid = pw_get_fail2ban_list_uuid( $account['id'], CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL );
+		if ( $uuid ) {
+			$list_uuids[ $account['id'] ] = $uuid;
+		}
+	}
+
+	$config = pw_generate_fail2ban_config( $matched_slug, $server_name, $list_uuids );
 	echo json_encode(
 		array(
 			'success'  => true,
 			'config'   => $config,
-			'filename' => 'cloudflare-fail2ban-config',
+			'filename' => 'cloudflare-fail2ban-config.txt',
 		)
 	);
 	exit;

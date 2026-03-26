@@ -17,6 +17,7 @@
 $fb_list_id       = defined( 'FAIL2BAN_LIST_ID' ) ? FAIL2BAN_LIST_ID : 'cf_fail2ban_blocked';
 $fb_token_path    = defined( 'FAIL2BAN_TOKEN_PATH' ) ? FAIL2BAN_TOKEN_PATH : '';
 $fb_servers       = defined( 'FAIL2BAN_SERVERS' ) ? FAIL2BAN_SERVERS : array();
+$fb_accounts      = defined( 'CLOUDFLARE_ACCOUNTS' ) ? CLOUDFLARE_ACCOUNTS : array();
 $fb_account_ids   = CLOUDFLARE_ACCOUNT_IDS;
 $fb_account_names = defined( 'CLOUDFLARE_ACCOUNT_NAMES' ) ? CLOUDFLARE_ACCOUNT_NAMES : array();
 
@@ -50,6 +51,11 @@ $config_missing = empty( $fb_token_path );
 .fb-zone-name { min-width: 200px; font-family: monospace; font-size: 0.9em; }
 .fb-server-block { border: 1px solid #dee2e6; border-radius: 5px; padding: 1.2em; margin: 1em 0; }
 .fb-server-block h4 { margin: 0 0 0.8em; }
+.fb-server-select-row { display: flex; align-items: center; gap: 0.8em; margin-bottom: 1.2em; flex-wrap: wrap; }
+.fb-server-select-row label { font-weight: 700; }
+.fb-server-select-row select { padding: 5px 10px; font-size: 1em; border-radius: 4px; border: 1px solid #adb5bd; }
+.fb-server-panel { display: none; }
+.fb-server-panel.active { display: block; }
 pre.fb-code { background: #1e2127; color: #abb2bf; padding: 1em 1.2em; border-radius: 5px; overflow-x: auto; font-size: 0.85em; margin: 0.6em 0; line-height: 1.5; }
 .fb-checklist-step { border-left: 3px solid #007bff; padding: 0.8em 1em; margin: 1em 0; background: #f8f9ff; border-radius: 0 4px 4px 0; }
 .fb-checklist-step > strong { display: block; margin-bottom: 0.4em; }
@@ -159,86 +165,115 @@ code.path { font-size: 0.85em; background: #f0f0f0; padding: 1px 5px; border-rad
 <p>The fail2ban block expression (<code>ip.src in $<?php echo htmlspecialchars( $fb_list_id, ENT_QUOTES, 'UTF-8' ); ?></code>) is already built into the <strong>Block WP Paths</strong> rule in every standard ruleset. After completing Step 1, go to the <a href="?page=waf-rules">WAF Rules Manager</a> tab and click <strong>Update Rules</strong> for each zone to push the updated ruleset.</p>
 
 <!-- ============================================================ -->
-<!-- STEP 3: SERVER CONFIGURATION FILES & DEPLOYMENT             -->
+<!-- STEP 3: SERVER CONFIGURATION FILES & DEPLOYMENT              -->
 <!-- ============================================================ -->
 <h3>Step 3: Server Configuration &amp; Deployment</h3>
 
 <?php if ( empty( $fb_servers ) ) : ?>
 <p><em>No servers configured &mdash; add <code>FAIL2BAN_SERVERS</code> to <code>config.php</code>.</em></p>
 <?php else : ?>
-<p>Download the config file for each server, then run the SCP commands below to deploy it along with the token files. Repeat for each server in your fleet.</p>
 
-	<?php foreach ( $fb_servers as $server ) : ?>
+<div class="fb-server-select-row">
+	<label for="fb-server-select">Server:</label>
+	<select id="fb-server-select">
+		<?php foreach ( $fb_servers as $server_slug => $server ) : ?>
+		<option value="<?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>">
+			<?php echo htmlspecialchars( $server['name'], ENT_QUOTES, 'UTF-8' ); ?>
+		</option>
+		<?php endforeach; ?>
+	</select>
+</div>
+
+	<?php foreach ( $fb_servers as $server_slug => $server ) : ?>
 		<?php
 		$safe_name      = htmlspecialchars( $server['name'], ENT_QUOTES, 'UTF-8' );
 		$safe_hostname  = htmlspecialchars( $server['hostname'], ENT_QUOTES, 'UTF-8' );
-		$safe_name_attr = $safe_name; // already escaped for HTML attributes
+		$safe_name_attr = $safe_name;
 		$ssh_user       = isset( $server['ssh_user'] ) ? $server['ssh_user'] : 'root';
 		$safe_ssh_user  = htmlspecialchars( $ssh_user, ENT_QUOTES, 'UTF-8' );
+		$safe_slug_attr = htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' );
+		$safe_msg_slug  = htmlspecialchars( preg_replace( '/\W/', '-', $server['name'] ), ENT_QUOTES, 'UTF-8' );
+
+		// Collect accounts that belong to this server (no 'servers' key = all servers).
+		$server_account_idxs = array();
+		$account_labels      = array();
+		foreach ( $fb_accounts as $idx => $account ) {
+			if ( isset( $account['servers'] ) && ! in_array( $server_slug, $account['servers'], true ) ) {
+				continue;
+			}
+			$server_account_idxs[] = $idx;
+			$account_labels[]      = $account['name'];
+		}
+
+		// Pre-build token SCP commands so the <pre> block has no surrounding whitespace.
+		$scp_token_commands = '';
+		foreach ( $server_account_idxs as $idx ) {
+			if ( ! isset( $fb_account_ids[ $idx ] ) ) {
+				continue;
+			}
+			$slug                = pw_get_account_slug( $idx );
+			$local               = rtrim( $fb_token_path ? $fb_token_path : '~/.cloudflare', '/' ) . '/cloudflare-api-key-' . $slug;
+			$scp_token_commands .= 'scp ' . htmlspecialchars( $local, ENT_QUOTES, 'UTF-8' ) . ' ' . $safe_ssh_user . '@' . $safe_hostname . ":/root/.cloudflare/\n";
+		}
+
+		// Scripts to deploy.
+		$scripts_dir         = 'fail2ban-scripts';
+		$scripts             = array( 'cloudflare-fail2ban-block', 'cloudflare-fail2ban-unban', 'cloudflare-fail2ban-sync' );
+		$scp_script_commands = '';
+		foreach ( $scripts as $script ) {
+			$scp_script_commands .= 'scp ' . htmlspecialchars( $scripts_dir . '/' . $script, ENT_QUOTES, 'UTF-8' ) . ' ' . $safe_ssh_user . '@' . $safe_hostname . ":/usr/local/bin/cloudflare-fail2ban/\n";
+		}
+		$scp_script_commands .= 'scp ' . htmlspecialchars( $scripts_dir . '/cloudflare-block.conf', ENT_QUOTES, 'UTF-8' ) . ' ' . $safe_ssh_user . '@' . $safe_hostname . ":/etc/fail2ban/action.d/\n";
 		?>
+<div class="fb-server-panel" id="fb-panel-<?php echo $safe_slug_attr; ?>">
 <div class="fb-server-block">
 	<h4><?php echo $safe_name; ?> <small style="font-weight:normal;color:#666"><?php echo $safe_hostname; ?></small></h4>
+		<?php if ( count( $account_labels ) < count( $fb_account_ids ) ) : ?>
+	<p><strong>Accounts for this server:</strong> <?php echo htmlspecialchars( implode( ', ', $account_labels ), ENT_QUOTES, 'UTF-8' ); ?></p>
+	<?php else : ?>
+	<p><strong>Accounts:</strong> All (<?php echo htmlspecialchars( implode( ', ', $account_labels ), ENT_QUOTES, 'UTF-8' ); ?>)</p>
+	<?php endif; ?>
+
+	<h5 style="margin:1em 0 0.4em">3a &mdash; Download &amp; deploy config</h5>
 	<p>
 		<button class="fb-btn fb-download-config-btn" data-server-name="<?php echo $safe_name_attr; ?>">
-			&#8659; Download cloudflare-fail2ban-config
+			&#8659; Download cloudflare-fail2ban-config.txt
 		</button>
-		<span class="fb-msg" id="fb-dl-msg-<?php echo htmlspecialchars( preg_replace( '/\W/', '-', $server['name'] ), ENT_QUOTES, 'UTF-8' ); ?>"></span>
+		<span class="fb-msg" id="fb-dl-msg-<?php echo $safe_msg_slug; ?>"></span>
 	</p>
+	<pre class="fb-code"># Create /root/.cloudflare on the server (first time only)
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mkdir -p /root/.cloudflare && sudo chmod 700 /root/.cloudflare"
 
-	<p><strong>After downloading, run these commands from your Mac terminal:</strong></p>
-	<pre class="fb-code"># 1. Create the destination directory on the server (if it doesn't exist)
-ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "mkdir -p ~/.cloudflare && chmod 700 ~/.cloudflare"
+# Deploy the config file (rename .txt → no extension)
+scp ~/Downloads/cloudflare-fail2ban-config.txt <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-config
 
-# 2. Deploy the config file (move it from ~/Downloads first, or adjust the path)
-scp ~/Downloads/cloudflare-fail2ban-config <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-config
+# Deploy token files
+<?php echo $scp_token_commands; // phpcs:ignore Generic.WhiteSpace.ScopeIndent ?>
+# Lock down permissions
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo chmod 600 /root/.cloudflare/cloudflare-api-key-*"</pre>
 
-# 3. Deploy token files
-		<?php foreach ( $fb_account_ids as $idx => $account_id ) : ?>
-			<?php
-			$slug  = pw_get_account_slug( $idx );
-			$local = rtrim( $fb_token_path ? $fb_token_path : '~/.cloudflare', '/' ) . '/cloudflare-api-key-' . $slug;
-			?>
-scp <?php echo htmlspecialchars( $local, ENT_QUOTES, 'UTF-8' ); ?> <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:~/.cloudflare/
-<?php endforeach; ?>
-
-# 4. Lock down permissions on the server
-ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "chmod 600 ~/.cloudflare/cloudflare-api-key-*"</pre>
+	<h5 style="margin:1em 0 0.4em">3b &mdash; Deploy / update scripts</h5>
+	<p>Run from the <strong>project root</strong> on your Mac whenever scripts change:</p>
+	<pre class="fb-code"><?php echo $scp_script_commands; // phpcs:ignore Generic.WhiteSpace.ScopeIndent ?>ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo chmod +x /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-{block,unban,sync}"</pre>
 </div>
-<?php endforeach; ?>
-<?php endif; ?>
 
-<!-- ============================================================ -->
-<!-- STEP 4: SERVER SETUP CHECKLIST (MANUAL STEPS)               -->
-<!-- ============================================================ -->
+<!-- STEP 4 per-server -->
 <h3>Step 4: Server Setup Checklist</h3>
-<p>These one-time steps must be done manually on each Plesk/Ubuntu server. Steps 1&ndash;3 above must be completed first.</p>
+<p>One-time manual steps on <strong><?php echo $safe_name; ?></strong>. Steps 1&ndash;3 must be completed first.</p>
 
 <div class="fb-checklist-step">
-	<strong>4a &mdash; Install the scripts</strong>
-<pre class="fb-code">sudo mkdir -p /usr/local/bin/cloudflare-fail2ban
-
-# Copy scripts from your local dist/cloudflare-fail2ban/ directory via scp or git
-sudo cp cloudflare-fail2ban-block  /usr/local/bin/cloudflare-fail2ban/
-sudo cp cloudflare-fail2ban-unban  /usr/local/bin/cloudflare-fail2ban/
-sudo cp cloudflare-fail2ban-sync   /usr/local/bin/cloudflare-fail2ban/
-sudo chmod +x /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-{block,unban,sync}
-
-# Symlinks for convenient access
-sudo ln -s /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-block /usr/local/bin/cloudflare-fail2ban-block
-sudo ln -s /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-unban /usr/local/bin/cloudflare-fail2ban-unban
-sudo ln -s /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-sync  /usr/local/bin/cloudflare-fail2ban-sync</pre>
+	<strong>4a &mdash; Create install directory &amp; symlinks (first time only)</strong>
+<pre class="fb-code">ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>
+sudo mkdir -p /usr/local/bin/cloudflare-fail2ban
+# (Deploy scripts via 3b above, then:)
+sudo ln -sf /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-block /usr/local/bin/cloudflare-fail2ban-block
+sudo ln -sf /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-unban /usr/local/bin/cloudflare-fail2ban-unban
+sudo ln -sf /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-sync  /usr/local/bin/cloudflare-fail2ban-sync</pre>
 </div>
 
 <div class="fb-checklist-step">
-	<strong>4b &mdash; Install the fail2ban action config</strong>
-<pre class="fb-code">sudo cp cloudflare-block.conf /etc/fail2ban/action.d/
-# Verify paths look correct
-sudo cat /etc/fail2ban/action.d/cloudflare-block.conf</pre>
-</div>
-
-<div class="fb-checklist-step">
-	<strong>4c &mdash; Add cloudflare-block to your fail2ban jails</strong>
-	<p>Edit <code>/etc/fail2ban/jail.local</code>:</p>
+	<strong>4b &mdash; Add cloudflare-block to your fail2ban jails</strong>
+	<p>Edit <code>/etc/fail2ban/jail.local</code> on <?php echo $safe_name; ?>:</p>
 <pre class="fb-code">[sshd]
 enabled = true
 action = %(action_)s
@@ -249,36 +284,42 @@ enabled = true
 action = %(action_)s
 		cloudflare-block
 
-# Or apply globally in [DEFAULT] — every jail will block at Cloudflare too:
+# Or apply globally in [DEFAULT]:
 # [DEFAULT]
 # action = %(action_mwl)s
 #          cloudflare-block</pre>
 </div>
 
 <div class="fb-checklist-step">
-	<strong>4d &mdash; Add the periodic sync cron job (safety net)</strong>
-<pre class="fb-code">sudo crontab -e
-# Add this line — runs every 4 hours to reconcile any missed ban/unban events:
+	<strong>4c &mdash; Add the periodic sync cron job</strong>
+<pre class="fb-code">ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>
+sudo crontab -e
+# Add this line — runs every 4 hours to reconcile missed ban/unban events:
 0 */4 * * * /usr/local/bin/cloudflare-fail2ban-sync >> /var/log/cloudflare-fail2ban-sync.log 2>&1</pre>
 </div>
 
 <div class="fb-checklist-step">
-	<strong>4e &mdash; Restart fail2ban and verify</strong>
-<pre class="fb-code">sudo systemctl restart fail2ban
+	<strong>4d &mdash; Restart fail2ban and verify</strong>
+<pre class="fb-code">ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>
+sudo systemctl restart fail2ban
 sudo fail2ban-client status</pre>
 </div>
 
 <div class="fb-checklist-step">
-	<strong>4f &mdash; Test the integration end-to-end</strong>
-<pre class="fb-code"># Block a test IP (it will appear in your Cloudflare IP list)
-sudo /usr/local/bin/cloudflare-fail2ban-block 198.51.100.1 test-jail
+	<strong>4e &mdash; Test the integration end-to-end</strong>
+<pre class="fb-code"># Block a test IP (will appear in Cloudflare IP list)
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo /usr/local/bin/cloudflare-fail2ban-block 198.51.100.1 test-jail"
 
 # Check syslog for results
-sudo grep cloudflare /var/log/syslog | tail -20
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo grep cloudflare /var/log/syslog | tail -20"
 
 # Remove the test IP
-sudo /usr/local/bin/cloudflare-fail2ban-unban 198.51.100.1 test-jail</pre>
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo /usr/local/bin/cloudflare-fail2ban-unban 198.51.100.1 test-jail"</pre>
 </div>
+
+</div><!-- .fb-server-panel -->
+	<?php endforeach; ?>
+<?php endif; ?>
 
 </div><!-- .fail2ban-setup -->
 
@@ -450,6 +491,23 @@ sudo /usr/local/bin/cloudflare-fail2ban-unban 198.51.100.1 test-jail</pre>
 				});
 		});
 	});
+
+	// ---------------------------------------------------------------
+	// Server selector dropdown (Steps 3 + 4).
+	// ---------------------------------------------------------------
+	var serverSelect = document.getElementById('fb-server-select');
+	if (serverSelect) {
+		function showServer(slug) {
+			document.querySelectorAll('.fb-server-panel').forEach(function (p) {
+				p.classList.toggle('active', p.id === 'fb-panel-' + slug);
+			});
+		}
+		// Show first server on load.
+		showServer(serverSelect.value);
+		serverSelect.addEventListener('change', function () {
+			showServer(serverSelect.value);
+		});
+	}
 
 	// ---------------------------------------------------------------
 	// STEP 3: Download config file for a server.

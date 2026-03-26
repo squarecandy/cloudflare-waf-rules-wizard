@@ -2,27 +2,34 @@
 // Cloudflare API configuration
 define( 'CLOUDFLARE_API_KEY', 'your_api_key_here' );
 define( 'CLOUDFLARE_EMAIL', 'your_email_here' );
+// One entry per Cloudflare account — id, human-readable name, and which fail2ban
+// server(s) (by FAIL2BAN_SERVERS slug) manage this account's blocked IPs.
+// Omit 'servers' on an account to deploy it to every server.
 define(
-	'CLOUDFLARE_ACCOUNT_IDS',
+	'CLOUDFLARE_ACCOUNTS',
 	array(
-		'account_id_1_here',
-		'account_id_2_here',
-		'account_id_3_here',
-	// Add more account IDs as needed
+		array(
+			'id'      => 'account_id_1_here',
+			'name'    => 'Client One',
+			'servers' => array( 'my-server' ),
+		),
+		array(
+			'id'      => 'account_id_2_here',
+			'name'    => 'Client Two',
+			'servers' => array( 'my-server' ),
+		),
+		array(
+			'id'      => 'account_id_3_here',
+			'name'    => 'Client Three',
+			'servers' => array( 'my-server' ),
+		),
+		// Add more accounts as needed.
 	)
 );
 
-// Human-readable nicknames for each account — must match the order of CLOUDFLARE_ACCOUNT_IDS.
-// Used to name API token files (e.g. cloudflare-api-key-client-one).
-define(
-	'CLOUDFLARE_ACCOUNT_NAMES',
-	array(
-		'Client One',
-		'Client Two',
-		'Client Three',
-	// Add more names as needed
-	)
-);
+// Derived — all existing code reads these constants directly and needs no changes.
+define( 'CLOUDFLARE_ACCOUNT_IDS', array_column( CLOUDFLARE_ACCOUNTS, 'id' ) );
+define( 'CLOUDFLARE_ACCOUNT_NAMES', array_column( CLOUDFLARE_ACCOUNTS, 'name' ) );
 
 // Fail2ban integration settings
 // See cloudflare-fail2ban README for full setup instructions.
@@ -33,19 +40,19 @@ define( 'FAIL2BAN_LIST_ID', 'cf_fail2ban_blocked' );
 // Token files are deployed to your server(s) via SCP — they are NEVER sent over HTTP.
 define( 'FAIL2BAN_TOKEN_PATH', '/Users/your-username/.cloudflare' );
 
-// Servers to generate configuration files for.
-// Add one entry per Plesk/Ubuntu server running fail2ban.
+// Servers keyed by a short slug — account 'servers' arrays reference these slugs.
 define(
 	'FAIL2BAN_SERVERS',
 	array(
-		array(
+		'my-server' => array(
 			'name'     => 'Server 1',
 			'hostname' => 'your-server.example.com',
 			'ssh_user' => 'root',
 		),
-		// array(
-		// 'name'     => 'Server 2',
-		// 'hostname' => 'staging.example.com',
+		// 'staging' => array(
+		//     'name'     => 'Staging',
+		//     'hostname' => 'staging.example.com',
+		//     'ssh_user' => 'root',
 		// ),
 	)
 );

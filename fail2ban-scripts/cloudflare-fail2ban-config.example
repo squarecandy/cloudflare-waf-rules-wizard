@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Cloudflare Fail2ban Integration Configuration
+# Copy this file to cloudflare-fail2ban-config and fill in your values
+# DO NOT commit the actual config file - add it to .gitignore
+
+# Cloudflare IP List ID (create a list in Security > WAF > Tools > Lists)
+# After creating the list, you can find the ID via API or in the URL when editing it
+# Use the SAME list ID across all your Cloudflare accounts for consistency
+# Use cf_fail2ban_blocked as the list ID unless you have a specific reason to change it.
+CLOUDFLARE_LIST_ID="cf_fail2ban_blocked"
+
+# Cloudflare Accounts Configuration
+# If you have multiple sites across different Cloudflare accounts on this server,
+# add each account ID and corresponding API key file path.
+# The scripts will add banned IPs to all configured accounts.
+
+# Array of Cloudflare Account IDs
+CLOUDFLARE_ACCOUNT_IDS=(
+    "account_id_1"
+    "account_id_2"
+    # Add more account IDs as needed
+)
+
+# Array of API key file paths (must correspond to account IDs above)
+# Each account should have its own API token file
+CLOUDFLARE_API_KEY_FILES=(
+    "/root/.cloudflare/cloudflare-api-key-account1"
+    "/root/.cloudflare/cloudflare-api-key-account2"
+    # Add more API key files as needed
+)
+
+# Pre-resolved list UUIDs — must correspond to account IDs above.
+# Cloudflare API URLs require the 32-char hex UUID, not the list name.
+# These are generated automatically by cloudflare.localhost when you download the config.
+# Regenerate this config file if you ever delete and recreate a list (UUID changes).
+CLOUDFLARE_LIST_UUIDS=(
+    "00000000000000000000000000000001"
+    "00000000000000000000000000000002"
+    # Add more UUIDs as needed
+)
+
+# Server identifier (used in IP descriptions for tracking which server blocked the IP)
+SERVER_NAME="$(hostname)"
