@@ -214,7 +214,6 @@ $challenge_asns = '(ip.src.asnum in {' . $cloud_asns . ' ' . $web_hosts . '} and
 // * perplexity-user (Perplexity retrieval)
 // These are distinct from training crawlers and drive authoritative referral traffic.
 $aggressive_crawlers_free = array(
-	'email extractor',
 	'ahrefs',
 	'aiohttp',
 	'amazonbot',
@@ -232,7 +231,6 @@ $aggressive_crawlers_free = array(
 	'cms spider',
 	'cohere-ai',         // Cohere LLM crawler
 	'contactbot',
-	'contentsmartz',
 	'datacha0s',
 	'dataforseo',        // dataforseobot
 	'dbrowse ',
@@ -240,16 +238,15 @@ $aggressive_crawlers_free = array(
 	'dotbot',            // Moz SEO crawler
 	'ebrowse',
 	'email_hunter',
+	'email extractor',
 	'extractorp',        // extractorpro
 	'facebookbot',       // Speech recognition and language model training, Minimal user-facing impact
 	'friendlycrawl',     // friendlycrawler
 	'go-http-',          // Go-http-client; Generic Go crawler, used by many scrapers and bots
 	'google-extended',   // Google Gemini/Vertex AI training crawler (distinct from Googlebot search crawler)
 	'gptbot',            // OpenAI training crawler (block training; note: chatgpt-user = live retrieval = do NOT block)
-	'guestbook',
-	'iaskspider',              // iaskspider; iAsk.ai training crawler
+	'iaskspider',        // iaskspider; iAsk.ai training crawler
 	'img2dataset',       // image dataset harvesting tool
-	'iplexx',
 	'letscrawl',         // letscrawl.com
 	'libwww-perl',       // old Perl HTTP client, rarely legitimate
 	'lmqueue',           // lmqueuebot
@@ -257,7 +254,6 @@ $aggressive_crawlers_free = array(
 	'marginalia',        // search.marginalia.nu
 	'meta-extern',       // meta-externalagent; Meta/Facebook AI model training. Stops AI training; no effect on link previews
 	'mj12bot',
-	'mvaclient',
 	'napbot',            // web scraper. seen in the wild on red poppy in 2026
 	'nasa search',
 	'netsystems',        // netsystemsresearch; aggressive "research" crawler
@@ -287,6 +283,7 @@ $aggressive_crawlers_free = array(
 	'sogou',
 	'sohu',              // sohu agent
 	'sqlmap',            // SQL injection attack tool
+	'tiktokspider',      // TikTokSpider, new TikTok crawler (new 2026)
 	'timpi',             // timpibot
 	'trackback',
 	'trendiction',       // trendictionbot
@@ -304,10 +301,14 @@ $aggressive_crawlers_free = array(
 // NOTE: chatgpt-user and claude-web are intentionally NOT here — see note above.
 $aggressive_crawlers_pro_extra = array(
 	'curl/',          // raw curl — almost never a real user on a WP site
+	'contentsmartz',
 	'freshbot',       // content scraper
 	'goodzer',        // web scraper
+	'guestbook',
 	'imagesiftbot',   // image scraper
+	'iplexx',
 	'jorgee',         // vulnerability scanner
+	'mvaclient',
 	'mozlila',        // fake Mozilla UA used by scrapers
 	'omgili',         // web intelligence crawler
 	'orbbot',         // aggressive proxy bot
