@@ -58,6 +58,7 @@ $squarecandy_server_ips = array(
 	'71.187.116.46', // Eileen Home 2026
 	'15.207.251.177', // Host Curator Nagios IP (monitoring server)
 );
+
 $self_access = '(ip.src in {' . implode( ' ', $squarecandy_server_ips ) . '})';
 
 
