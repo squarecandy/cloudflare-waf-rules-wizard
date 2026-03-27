@@ -53,6 +53,10 @@ $squarecandy_server_ips = array(
 	'45.77.107.160', // Square Candy Site Stage
 	'45.76.9.149', // Orion Magazine Server
 	'67.246.27.0', // Pete Home 2026
+	'2001:4860:7:110e::a9', // Pete Home 2026
+	'2600:4040:a73d:e500:450f:66f:1b83:693c', // Eileen Home 2026
+	'71.187.116.46', // Eileen Home 2026
+	'15.207.251.177', // Host Curator Nagios IP (monitoring server)
 );
 $self_access = '(ip.src in {' . implode( ' ', $squarecandy_server_ips ) . '})';
 
