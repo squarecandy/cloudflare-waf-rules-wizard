@@ -53,6 +53,24 @@ $generated_at  = file_exists( $file_standard ) ? date( 'Y-m-d H:i:s', filemtime(
 	</div>
 </div>
 
+<h3>Deploy via SCP</h3>
+<p>Run from the project root to push <code>bot-blocking.conf</code> to each server:</p>
+<div class="nginx-scp-list">
+	<?php foreach ( FAIL2BAN_SERVERS as $server ) : ?>
+		<?php
+		$scp_cmd = 'scp nginx/bot-blocking.conf '
+			. $server['ssh_user'] . '@' . $server['hostname']
+			. ':/etc/nginx/firewall/';
+		?>
+		<div class="nginx-scp-row">
+			<span class="nginx-scp-label"><?php echo htmlspecialchars( $server['name'], ENT_QUOTES, 'UTF-8' ); ?></span>
+			<code class="nginx-scp-cmd" id="nginx-scp-<?php echo htmlspecialchars( $server['hostname'], ENT_QUOTES, 'UTF-8' ); ?>"><?php echo htmlspecialchars( $scp_cmd, ENT_QUOTES, 'UTF-8' ); ?></code>
+			<button class="nginx-scp-copy-btn" data-cmd="<?php echo htmlspecialchars( $scp_cmd, ENT_QUOTES, 'UTF-8' ); ?>">Copy</button>
+			<span class="nginx-copy-confirm nginx-scp-confirm"></span>
+		</div>
+	<?php endforeach; ?>
+</div>
+
 <style>
 .nginx-meta {
 	color: #666;
@@ -142,6 +160,37 @@ $generated_at  = file_exists( $file_standard ) ? date( 'Y-m-d H:i:s', filemtime(
 	box-sizing: border-box;
 	margin: 0;
 }
+.nginx-scp-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5em;
+	margin-top: 0.75em;
+}
+.nginx-scp-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75em;
+	flex-wrap: wrap;
+}
+.nginx-scp-label {
+	font-weight: 600;
+	min-width: 12em;
+	flex-shrink: 0;
+}
+.nginx-scp-cmd {
+	font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+	font-size: 0.85em;
+	background: #f1f1f1;
+	border: 1px solid #ccc;
+	border-radius: 3px;
+	padding: 0.25em 0.5em;
+	flex: 1;
+	word-break: break-all;
+}
+.nginx-scp-copy-btn {
+	flex-shrink: 0;
+	cursor: pointer;
+}
 </style>
 
 <script>
@@ -156,12 +205,24 @@ $generated_at  = file_exists( $file_standard ) ? date( 'Y-m-d H:i:s', filemtime(
 		});
 	});
 
-	// Copy to clipboard
+	// Copy to clipboard — conf textareas
 	document.querySelectorAll('.nginx-copy-btn').forEach(function (btn) {
 		btn.addEventListener('click', function () {
 			var textarea = document.getElementById(btn.dataset.target);
 			var confirmEl = document.getElementById('nginx-copy-confirm-' + btn.dataset.target.replace('nginx-conf-', ''));
 			navigator.clipboard.writeText(textarea.value).then(function () {
+				confirmEl.textContent = '✓ Copied!';
+				confirmEl.classList.add('visible');
+				setTimeout(function () { confirmEl.classList.remove('visible'); }, 2500);
+			});
+		});
+	});
+
+	// Copy to clipboard — scp commands
+	document.querySelectorAll('.nginx-scp-copy-btn').forEach(function (btn) {
+		btn.addEventListener('click', function () {
+			var confirmEl = btn.nextElementSibling;
+			navigator.clipboard.writeText(btn.dataset.cmd).then(function () {
 				confirmEl.textContent = '✓ Copied!';
 				confirmEl.classList.add('visible');
 				setTimeout(function () { confirmEl.classList.remove('visible'); }, 2500);
