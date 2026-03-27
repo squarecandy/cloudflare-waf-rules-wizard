@@ -352,8 +352,6 @@ $wp_path_strings = array(
 	'/.htaccess',       // Apache config probe
 	'.bak',             // backup file probes
 	'.sql',             // database dump exposure
-	'wp/v2/users',      // WordPress REST API user enumeration probe
-	'?=author',         // WordPress user enumeration probe via query string
 );
 
 $wp_paths = array_map(
@@ -364,6 +362,12 @@ $wp_paths = array_map(
 );
 
 $wp_paths = implode( ' or ', $wp_paths );
+
+// Add blocking of WP user enumeration probes
+// 'wp/v2/users' = WordPress REST API user enumeration probe
+// '?=author' = WordPress user enumeration probe via query string
+// check for absence of "wordpress_logged_in_" cookie to avoid blocking legitimate access (logged in site admins)
+$wp_paths .= ' or (http.request.uri.path contains "wp/v2/users" and not http.cookie contains "wordpress_logged_in_") or (http.request.uri.path contains "?=author" and not http.cookie contains "wordpress_logged_in_")';
 
 // Block AI training crawlers by Cloudflare bot category.
 // "AI Assistant" is intentionally excluded — it covers chatgpt-user and claude-web (live retrieval bots
