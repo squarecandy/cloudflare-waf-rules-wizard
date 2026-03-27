@@ -42,6 +42,21 @@ $salesforce_wc = '(starts_with(http.request.uri.path, "/wp-json/wc") and http.us
 // Allow Salesforce GiveWP API Calls
 $salesforce_give = '(starts_with(http.request.uri.path, "/give-api/donations") and http.user_agent contains "SFDC-Callout")';
 
+// Allow server self-access
+$squarecandy_server_ips = array(
+	'2600:3c03::f03c:94ff:fe10:7c23', // Plesk server IPv6
+	'172.104.215.130', // Plesk server IPv4
+	'144.202.5.168', // Bang on a Can Server (Vultr)
+	'207.148.30.37', // MDHistory GridPane Server
+	'104.238.135.185', // Sqcdy Shared
+	'149.28.55.229', // SquareCandy Site
+	'45.77.107.160', // Square Candy Site Stage
+	'45.76.9.149', // Orion Magazine Server
+	'67.246.27.0', // Pete Home 2026
+);
+$self_access = '(ip.src in {' . implode( ' ', $squarecandy_server_ips ) . '})';
+
+
 // Allow Rules Free
 $allow_free            = array(
 	$googlebot,
@@ -60,6 +75,7 @@ $allow_free            = array(
 	$github,
 	$asana,
 	$betteruptime,
+	$self_access,
 );
 $allow_expression_free = implode( ' or ', $allow_free );
 
