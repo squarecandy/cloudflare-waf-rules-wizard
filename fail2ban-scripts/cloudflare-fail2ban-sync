@@ -86,7 +86,10 @@ for jail in $JAILS; do
             fi
             # Validate: skip anything that isn't a plain IPv4 or IPv6 address
             if [[ ! "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] && [[ ! "$ip" =~ ^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$ ]]; then
-                echo "  WARNING: Skipping invalid IP: '$ip'"
+                # Plesk permanent-ban jails intentionally use CIDR ranges — skip silently.
+                if [[ "$jail" != "plesk-permanent-ban" && "$jail" != "permanent-ban" ]]; then
+                    echo "  WARNING: Skipping invalid IP from jail '$jail': '$ip'"
+                fi
                 SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
                 continue
             fi
