@@ -139,12 +139,6 @@ for i in "${!CLOUDFLARE_ACCOUNT_IDS[@]}"; do
     ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_IDS[$i]}"
     API_KEY_FILE="${CLOUDFLARE_API_KEY_FILES[$i]}"
 
-    # Sleep between accounts to avoid rate limiting
-    if [ "$i" -gt 0 ]; then
-        echo "Waiting 10s before next account..."
-        sleep 10
-    fi
-
     echo "Processing account ${ACCOUNT_ID:0:8}..."
 
     # Load API key for this account
@@ -174,7 +168,7 @@ for i in "${!CLOUDFLARE_ACCOUNT_IDS[@]}"; do
     # PUT replaces the entire list in one request — no delete step needed
     PUT_ATTEMPTS=0
     while [ $PUT_ATTEMPTS -lt 3 ]; do
-        RESPONSE=$(curl -s -D "$HEADER_FILE" -X PUT "$API_URL" \
+        RESPONSE=$(curl -4 -s -D "$HEADER_FILE" -X PUT "$API_URL" \
             -H "Authorization: Bearer ${API_KEY}" \
             -H "Content-Type: application/json" \
             --data @"$PUT_PAYLOAD")

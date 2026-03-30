@@ -103,7 +103,7 @@ for i in "${!CLOUDFLARE_ACCOUNT_IDS[@]}"; do
     API_URL="https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/rules/lists/${LIST_UUID}/items"
     
     # Add IP to Cloudflare list
-    RESPONSE=$(curl -s -X POST "$API_URL" \
+    RESPONSE=$(curl -4 -s -X POST "$API_URL" \
         -H "Authorization: Bearer ${API_KEY}" \
         -H "Content-Type: application/json" \
         --data "$JSON_PAYLOAD")

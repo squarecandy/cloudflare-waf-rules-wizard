@@ -84,7 +84,7 @@ for i in "${!CLOUDFLARE_ACCOUNT_IDS[@]}"; do
     API_URL="https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/rules/lists/${LIST_UUID}/items"
     
     # Get all items in the list to find the one matching our IP
-    RESPONSE=$(curl -s -X GET "$API_URL" \
+    RESPONSE=$(curl -4 -s -X GET "$API_URL" \
         -H "Authorization: Bearer ${API_KEY}" \
         -H "Content-Type: application/json")
     
@@ -106,7 +106,7 @@ for i in "${!CLOUDFLARE_ACCOUNT_IDS[@]}"; do
 EOF
 )
     
-    DELETE_RESPONSE=$(curl -s -X DELETE "$API_URL" \
+    DELETE_RESPONSE=$(curl -4 -s -X DELETE "$API_URL" \
         -H "Authorization: Bearer ${API_KEY}" \
         -H "Content-Type: application/json" \
         --data "$DELETE_PAYLOAD")
