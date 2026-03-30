@@ -305,23 +305,34 @@ $aggressive_crawlers_free = array(
 );
 
 // Pro-only extras: lower-priority or less common bots. No char limit on pro tier.
-// Also used by the nginx generator via $aggressive_crawlers_all.
+// Also used by the nginx generator and fail2ban filter generator via $aggressive_crawlers_all.
 // NOTE: chatgpt-user and claude-web are intentionally NOT here — see note above.
 $aggressive_crawlers_pro_extra = array(
-	'curl/',          // raw curl — almost never a real user on a WP site
+	'blexbot',        // BLEXBot web intelligence crawler (WeSEE)
+	'cliqzbot',       // defunct Cliqz browser bot — still appears in logs
 	'contentsmartz',
+	'curl/',          // raw curl — almost never a real user on a WP site
+	'domaincrawler',  // domain enumeration crawler
+	'emailsiphon',    // email harvester
 	'freshbot',       // content scraper
 	'goodzer',        // web scraper
 	'guestbook',
+	'httrack',        // HTTrack website copier — used by scrapers/rippers
 	'imagesiftbot',   // image scraper
 	'iplexx',
 	'jorgee',         // vulnerability scanner
-	'mvaclient',
+	'liebaof',        // LieBaoFast Chinese browser with aggressive crawling
+	'majestic12',     // Majestic SEO backlink crawler
+	'megaindex',      // MegaIndex.ru Russian SEO analytics crawler
 	'mozlila',        // fake Mozilla UA used by scrapers
+	'mvaclient',
+	'newspaper',      // content scraper, seen on Orion 2026-03
 	'omgili',         // web intelligence crawler
 	'orbbot',         // aggressive proxy bot
+	'seocompany',     // SEO spam bot
+	'sistrix',        // SISTRIX German SEO crawler
+	'velenp',         // VelenPublicWebCrawler
 	'wp-cli',         // should never come from outside the server
-	'newspaper',      // content scraper, seen on Orion 2026-03
 );
 
 // Combined list: used for nginx rules and the pro CF rule
@@ -364,6 +375,7 @@ $wp_path_strings = array(
 	'network.php',      // WordPress Multisite network admin probe / dropped malware filename
 	'wp-ajf.php',       // malicious file probe
 	'eval-stdin.php',   // dropped malware filename
+	'webuploader',      // Chinese webuploader component exploit probe
 	'/tel:',            // href injection probes
 	'/tel%3a',          // href injection probes (URL-encoded)
 	'/mailto',          // href injection probes (/mailto: and /mailto%3a)
