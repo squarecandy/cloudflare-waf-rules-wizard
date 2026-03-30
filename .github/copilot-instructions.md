@@ -25,7 +25,7 @@ The following commands have standing permission and **do not require confirmatio
 
 ## Restrictions That Still Apply
 - Do NOT overwrite or delete project files via terminal commands without explicit confirmation.
-- Do NOT run commands outside the project root (`/Users/peterwise/Sites/cloudflare.localhost/`).
+- Do NOT run commands outside the project root (`[current user projects path]/cloudflare.localhost/`).
 - Do NOT run background processes (`isBackground: true`) — all commands should show visible output.
 
 ## Code Standards
