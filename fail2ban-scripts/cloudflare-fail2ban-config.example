@@ -40,5 +40,12 @@ CLOUDFLARE_LIST_UUIDS=(
     # Add more UUIDs as needed
 )
 
+# Human-readable account nicknames for log output (must match order of CLOUDFLARE_ACCOUNT_IDS)
+CLOUDFLARE_ACCOUNT_NICKNAMES=(
+    "Account One"
+    "Account Two"
+    # Add more nicknames as needed
+)
+
 # Server identifier (used in IP descriptions for tracking which server blocked the IP)
 SERVER_NAME="$(hostname)"

@@ -62,7 +62,10 @@ if [ -z "$JAILS" ]; then
     JAILS=""
 fi
 
-echo "Collecting banned IPs from fail2ban..."
+echo "--- $(date '+%Y-%m-%d %H:%M:%S') ---"
+
+SKIPPED_COUNT=0
+JAIL_COUNT=0
 
 # Collect all banned IPs from all jails
 > "$CSV_FILE"  # Create empty CSV file
@@ -70,10 +73,10 @@ echo "Collecting banned IPs from fail2ban..."
 for jail in $JAILS; do
     # Get banned IPs for this jail
     BANNED_IPS=$(fail2ban-client status "$jail" | grep "Banned IP list:" | sed 's/.*Banned IP list://' | tr -d '\t' | tr ' ' '\n' | grep -v '^$' || true)
-    
+
     if [ -n "$BANNED_IPS" ]; then
-        echo "  Jail '$jail': $(echo "$BANNED_IPS" | wc -l | tr -d ' ') banned IPs"
-        
+        JAIL_COUNT=$((JAIL_COUNT + 1))
+
         # Add each IP to CSV with CIDR notation and description
         while read -r ip; do
             # Strip all whitespace/carriage returns
@@ -83,7 +86,8 @@ for jail in $JAILS; do
             fi
             # Validate: skip anything that isn't a plain IPv4 or IPv6 address
             if [[ ! "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] && [[ ! "$ip" =~ ^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$ ]]; then
-                echo "  WARNING: Skipping invalid IP from fail2ban: '$ip'"
+                echo "  WARNING: Skipping invalid IP: '$ip'"
+                SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
                 continue
             fi
             # Add to CSV: ip,comment
@@ -94,20 +98,24 @@ done
 
 # Count total IPs
 TOTAL_IPS=$(wc -l < "$CSV_FILE" | tr -d ' ')
-echo "Total banned IPs collected: $TOTAL_IPS"
 
 # Remove duplicates (in case an IP is banned in multiple jails, keep first occurrence)
 sort -t',' -k1,1 -u "$CSV_FILE" -o "$CSV_FILE"
 
 UNIQUE_IPS=$(wc -l < "$CSV_FILE" | tr -d ' ')
+SUMMARY_EXTRA=""
 if [ "$TOTAL_IPS" -ne "$UNIQUE_IPS" ]; then
-    echo "Removed $((TOTAL_IPS - UNIQUE_IPS)) duplicate IPs, unique IPs: $UNIQUE_IPS"
+    SUMMARY_EXTRA=", $((TOTAL_IPS - UNIQUE_IPS)) duplicates removed"
 fi
+if [ "$SKIPPED_COUNT" -gt 0 ]; then
+    SUMMARY_EXTRA="${SUMMARY_EXTRA}, $SKIPPED_COUNT invalid IPs skipped"
+fi
+echo "Collected $UNIQUE_IPS unique IPs from $JAIL_COUNT jails${SUMMARY_EXTRA}"
 
 # Now replace the entire Cloudflare list with this CSV for all accounts
 # Uses PUT /items which replaces the full list in one API call per account,
 # avoiding the GET + DELETE + POST cycle that triggers rate limits.
-echo "Updating Cloudflare IP lists across all accounts..."
+echo "Syncing to ${#CLOUDFLARE_ACCOUNT_IDS[@]} Cloudflare accounts..."
 
 # Build a single JSON payload from the CSV (reused for every account)
 PUT_PAYLOAD="${TEMP_DIR}/put_payload.json"
@@ -139,7 +147,8 @@ for i in "${!CLOUDFLARE_ACCOUNT_IDS[@]}"; do
     ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_IDS[$i]}"
     API_KEY_FILE="${CLOUDFLARE_API_KEY_FILES[$i]}"
 
-    echo "Processing account ${ACCOUNT_ID:0:8}..."
+    ACCOUNT_NICK="${CLOUDFLARE_ACCOUNT_NICKNAMES[$i]:-}"
+    ACCOUNT_LABEL="${ACCOUNT_NICK:-${ACCOUNT_ID:0:8}...}"
 
     # Load API key for this account
     if [ ! -f "$API_KEY_FILE" ]; then
@@ -159,12 +168,6 @@ for i in "${!CLOUDFLARE_ACCOUNT_IDS[@]}"; do
     # API endpoint for list items
     API_URL="https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/rules/lists/${LIST_UUID}/items"
 
-    if [ "$UNIQUE_IPS" -gt 0 ]; then
-        echo "  Replacing list with $UNIQUE_IPS IPs (PUT)..."
-    else
-        echo "  Clearing list (PUT with empty array)..."
-    fi
-
     # PUT replaces the entire list in one request — no delete step needed
     PUT_ATTEMPTS=0
     while [ $PUT_ATTEMPTS -lt 3 ]; do
@@ -174,7 +177,7 @@ for i in "${!CLOUDFLARE_ACCOUNT_IDS[@]}"; do
             --data @"$PUT_PAYLOAD")
 
         if echo "$RESPONSE" | grep -qE '"success"[[:space:]]*:[[:space:]]*true'; then
-            echo "  List updated successfully"
+            echo "  [OK] $ACCOUNT_LABEL"
             break
         elif echo "$RESPONSE" | grep -q '"code":971'; then
             PUT_ATTEMPTS=$((PUT_ATTEMPTS + 1))
@@ -186,18 +189,16 @@ for i in "${!CLOUDFLARE_ACCOUNT_IDS[@]}"; do
             sleep "$WAIT"
         else
             CF_RAY=$(grep -i '^cf-ray:' "$HEADER_FILE" | awk '{print $2}' | tr -d '\r')
-            echo "  ERROR: Failed to update list (CF-Ray: ${CF_RAY:-unknown})"
+            echo "  ERROR: $ACCOUNT_LABEL — failed to update list (CF-Ray: ${CF_RAY:-unknown})"
             echo "  Response: $RESPONSE"
             break
         fi
     done
-
-    echo "  Account ${ACCOUNT_ID:0:8}... sync completed"
 
 done  # End of account loop
 
 # Log to syslog
 logger -t cloudflare-fail2ban-sync "Synced $UNIQUE_IPS banned IPs to ${#CLOUDFLARE_ACCOUNT_IDS[@]} Cloudflare account(s)"
 
-echo "All accounts synced. Done."
+echo "Done."
 exit 0

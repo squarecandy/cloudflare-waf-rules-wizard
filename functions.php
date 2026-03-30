@@ -951,6 +951,7 @@ function pw_generate_fail2ban_config( $server_slug, $server_name, $list_uuids = 
 	$ids_block   = '';
 	$files_block = '';
 	$uuids_block = '';
+	$names_block = '';
 	foreach ( $all_accounts as $idx => $account ) {
 		// Skip accounts that list servers explicitly but don't include this one.
 		if ( isset( $account['servers'] ) && ! in_array( $server_slug, $account['servers'], true ) ) {
@@ -958,9 +959,11 @@ function pw_generate_fail2ban_config( $server_slug, $server_name, $list_uuids = 
 		}
 		$slug         = pw_get_account_slug( $idx );
 		$uuid         = isset( $list_uuids[ $account['id'] ] ) ? $list_uuids[ $account['id'] ] : '';
+		$name         = isset( $account['name'] ) ? str_replace( array( '"', '\\', '$', '`' ), '', $account['name'] ) : $slug;
 		$ids_block   .= "    \"{$account['id']}\"\n";
 		$files_block .= "    \"/root/.cloudflare/cloudflare-api-key-{$slug}\"\n";
 		$uuids_block .= "    \"{$uuid}\"\n";
+		$names_block .= "    \"{$name}\"\n";
 	}
 
 	$safe_name = str_replace( array( '"', '\\', '$', '`' ), '', $server_name );
@@ -975,6 +978,8 @@ function pw_generate_fail2ban_config( $server_slug, $server_name, $list_uuids = 
 	$config .= "# Pre-resolved list UUIDs — Cloudflare API URLs require the hex UUID, not the name.\n";
 	$config .= "# Regenerate this config if you recreate a list (UUID changes).\n";
 	$config .= "CLOUDFLARE_LIST_UUIDS=(\n{$uuids_block})\n\n";
+	$config .= "# Human-readable account nicknames for log output (must match order of CLOUDFLARE_ACCOUNT_IDS).\n";
+	$config .= "CLOUDFLARE_ACCOUNT_NICKNAMES=(\n{$names_block})\n\n";
 	$config .= "SERVER_NAME=\"{$safe_name}\"\n";
 
 	return $config;
