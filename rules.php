@@ -17,6 +17,8 @@ $wayback = '(http.user_agent contains "archive.org" and cf.client.bot)';
 $accessibility = '(cf.verified_bot_category eq "Accessibility")';
 // Allow Uptime Robot
 $uptimerobot = '(cf.verified_bot_category eq "Monitoring & Analytics" and http.user_agent contains "UptimeRobot")';
+// Allow Ping localhost uptime monitoring
+$ping = '(http.user_agent contains "neat.software.Ping")';
 // Allow Let's Encrypt
 $letsencrypt = '(http.user_agent contains "letsencrypt" and http.request.uri.path contains "acme-challenge")';
 // Allow Stripe
@@ -71,6 +73,7 @@ $allow_free            = array(
 	$wayback,
 	$accessibility,
 	$uptimerobot,
+	$ping,
 	$letsencrypt,
 	$stripe,
 	$ewww,
