@@ -250,7 +250,10 @@ ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mkdir -p /
 # Deploy config, script, and token files
 scp ~/Downloads/cloudflare-fail2ban-config.txt <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-config
 scp fail2ban-scripts/cloudflare-fail2ban-sync <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/usr/local/bin/cloudflare-fail2ban/
-<?php echo $scp_token_commands; // phpcs:ignore Generic.WhiteSpace.ScopeIndent ?></pre>
+<?php echo $scp_token_commands; // phpcs:ignore Generic.WhiteSpace.ScopeIndent ?>
+# Deploy fail2ban filters and custom jails
+scp fail2ban-filters/sqcdy-*.conf fail2ban-filters/sqcdy-*.local <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/etc/fail2ban/filter.d/
+scp fail2ban-jails/sqcdy-jails.conf <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/etc/fail2ban/jail.d/</pre>
 </div>
 
 <div class="fb-checklist-step">
@@ -266,9 +269,10 @@ ln -sf /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-sync /usr/local/bi
 </div>
 
 <div class="fb-checklist-step">
-	<strong>3d &mdash; Verify fail2ban is running</strong>
-	<p>No changes to <code>jail.local</code> are needed &mdash; the sync cron reads directly from <code>fail2ban-client status</code> every 5 minutes.</p>
+	<strong>3d &mdash; Deploy fail2ban jails and reload</strong>
+	<p>The custom jails live in <code>jail.d/sqcdy-jails.conf</code> &mdash; this does <strong>not</strong> modify Plesk&rsquo;s <code>jail.local</code>. The sync cron reads directly from <code>fail2ban-client status</code> every 5 minutes &mdash; no changes to <code>jail.local</code> are needed.</p>
 <pre class="fb-code">systemctl status fail2ban
+fail2ban-client reload
 fail2ban-client status</pre>
 </div>
 
@@ -306,6 +310,21 @@ tail -50 /var/log/cloudflare-fail2ban-sync.log</pre>
 	<strong>Scripts changed</strong>
 	<p>From the <strong>project root</strong> on your Mac:</p>
 	<pre class="fb-code"><?php echo $scp_script_commands; // phpcs:ignore Generic.WhiteSpace.ScopeIndent ?></pre>
+</div>
+
+<div class="fb-checklist-step">
+	<strong>Bot lists or WP paths changed (rules.php)</strong>
+	<p>Regenerate the fail2ban filters, deploy all filter files, then reload fail2ban:</p>
+	<pre class="fb-code">php generate-fail2ban-filters.php
+scp fail2ban-filters/sqcdy-*.conf fail2ban-filters/sqcdy-*.local <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/etc/fail2ban/filter.d/
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo fail2ban-client reload"</pre>
+</div>
+
+<div class="fb-checklist-step">
+	<strong>Jail settings changed (fail2ban-jails/sqcdy-jails.conf)</strong>
+	<p>Deploy the updated jails file and reload fail2ban:</p>
+	<pre class="fb-code">scp fail2ban-jails/sqcdy-jails.conf <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/etc/fail2ban/jail.d/
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo fail2ban-client reload"</pre>
 </div>
 
 </div><!-- .fb-server-panel -->

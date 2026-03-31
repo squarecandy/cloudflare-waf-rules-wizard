@@ -1,0 +1,12 @@
+# ============================================================================
+# sqcdy-wp-custom.local — AUTO-GENERATED, DO NOT EDIT BY HAND
+# Generated: 2026-03-30 18:55:18
+# Source:    $wp_path_strings in rules.php  (edit that file, then re-run generate-fail2ban-filters.php)
+#
+# Overrides wpcustompaths in sqcdy-wp-custom.conf (failregex lives in the .conf).
+# Deploy: scp fail2ban-filters/sqcdy-wp-custom.local user@host:/etc/fail2ban/filter.d/
+#         ssh user@host "sudo fail2ban-client reload"
+# ============================================================================
+
+[Definition]
+wpcustompaths = xmlrpc|xmrlpc|wlwmanifest|wp\-config|passwd|/\.env|network\.php|wp\-ajf\.php|eval\-stdin\.php|webuploader|/\.git|/phpinfo|/phpmyadmin|readme\.html|license\.txt|wp\-trackback\.php|debug\.log|/\.htaccess|\.bak|\.sql

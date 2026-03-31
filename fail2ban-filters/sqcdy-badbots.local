@@ -1,0 +1,12 @@
+# ============================================================================
+# sqcdy-badbots.local — AUTO-GENERATED, DO NOT EDIT BY HAND
+# Generated: 2026-03-30 18:55:18
+# Source:    rules.php  (edit that file, then re-run generate-fail2ban-filters.php)
+#
+# Overrides badbotscustom in sqcdy-badbots.conf (failregex lives in the .conf).
+# Deploy: scp fail2ban-filters/sqcdy-badbots.local user@host:/etc/fail2ban/filter.d/
+#         ssh user@host "sudo fail2ban-client reload"
+# ============================================================================
+
+[Definition]
+badbotscustom = admin@google|ahrefs|aiohttp|amazonbot|anthropic-ai|applebot-extended|awariobot|baidu|barkrowl|blexbot|br-crawl|brightdata|bytedance|bytespider|ccbot|claudebot|cliqzbot|cms spider|cohere-ai|contactbot|contentsmartz|curl/|datacha0s|dataforseo|dbrowse |diffbot|domaincrawler|dotbot|ebrowse|email extractor|email_hunter|emailsiphon|extractorp|facebookbot|freshbot|friendlycrawl|go-http-|goodzer|google-extended|gptbot|guestbook|httrack|iaskspider|imagesiftbot|img2dataset|iplexx|jorgee|letscrawl|libwww-perl|liebaof|lmqueue|mail.ru|majestic12|marginalia|megaindex|meta-extern|mj12bot|mozlila|mvaclient|napbot|nasa search|netsystems|newspaper|nikto|nsauditor|omgili|orbbot|panscient|perplexitybot|petalbot|production bot|program shareware|python-httpx|python-requests|scan4mail|scrapy|screaming frog|semanticscholar|semrush|seocompany|seokicks|seranking|serpstat|seznam|shablast|sistrix|siteaudit|sleepbot|snap|sogou|sohu|sqlmap|tiktokspider|timpi|trackback|trendiction|turnitin|tweetmeme|vadix|velenp|webemailextrac|webvulncrawl|wp-cli|yandex|zgrab
