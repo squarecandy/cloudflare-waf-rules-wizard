@@ -251,9 +251,11 @@ ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mkdir -p /
 scp ~/Downloads/cloudflare-fail2ban-config.txt <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-config
 scp fail2ban-scripts/cloudflare-fail2ban-sync <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/usr/local/bin/cloudflare-fail2ban/
 <?php echo $scp_token_commands; // phpcs:ignore Generic.WhiteSpace.ScopeIndent ?>
-# Deploy fail2ban filters and custom jails
-scp fail2ban-filters/sqcdy-*.conf fail2ban-filters/sqcdy-*.local <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/etc/fail2ban/filter.d/
-scp fail2ban-jails/sqcdy-jails.conf <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/etc/fail2ban/jail.d/</pre>
+# Deploy fail2ban filters and custom jails (scp to /tmp first, then sudo mv)
+scp fail2ban-filters/sqcdy-*.conf fail2ban-filters/sqcdy-*.local <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/tmp/
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mv /tmp/sqcdy-*.conf /tmp/sqcdy-*.local /etc/fail2ban/filter.d/"
+scp fail2ban-jails/sqcdy-jails.conf <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/tmp/
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mv /tmp/sqcdy-jails.conf /etc/fail2ban/jail.d/"</pre>
 </div>
 
 <div class="fb-checklist-step">
@@ -316,15 +318,15 @@ tail -50 /var/log/cloudflare-fail2ban-sync.log</pre>
 	<strong>Bot lists or WP paths changed (rules.php)</strong>
 	<p>Regenerate the fail2ban filters, deploy all filter files, then reload fail2ban:</p>
 	<pre class="fb-code">php generate-fail2ban-filters.php
-scp fail2ban-filters/sqcdy-*.conf fail2ban-filters/sqcdy-*.local <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/etc/fail2ban/filter.d/
-ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo fail2ban-client reload"</pre>
+scp fail2ban-filters/sqcdy-*.conf fail2ban-filters/sqcdy-*.local <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/tmp/
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mv /tmp/sqcdy-*.conf /tmp/sqcdy-*.local /etc/fail2ban/filter.d/ && sudo fail2ban-client reload"</pre>
 </div>
 
 <div class="fb-checklist-step">
 	<strong>Jail settings changed (fail2ban-jails/sqcdy-jails.conf)</strong>
 	<p>Deploy the updated jails file and reload fail2ban:</p>
-	<pre class="fb-code">scp fail2ban-jails/sqcdy-jails.conf <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/etc/fail2ban/jail.d/
-ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo fail2ban-client reload"</pre>
+	<pre class="fb-code">scp fail2ban-jails/sqcdy-jails.conf <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/tmp/
+ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mv /tmp/sqcdy-jails.conf /etc/fail2ban/jail.d/ && sudo fail2ban-client reload"</pre>
 </div>
 
 </div><!-- .fb-server-panel -->
