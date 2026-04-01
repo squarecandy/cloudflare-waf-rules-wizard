@@ -203,6 +203,9 @@ $web_hosts = array(
 	'47890', // UNMANAGED LTD (UK hosting/colo) - merged from Orion rules
 	'153656', // OWGELS INTERNATIONAL CO., LIMITED (Hong Kong hosting reseller) - merged from Orion rules
 	'45753', // Netsec Limited / SimCentric (Hong Kong colo/hosting) - merged from Orion rules
+	'18403', // Vietnam, FPT Telecom Company - seen abusing Orion 2026/04
+	'7552', // Vietnam, Viettel Group - seen abusing Orion 2026/04
+	'45899', // Vietname, VNPT Corp - seen abusing Orion 2026/04
 );
 $web_hosts = implode( ' ', $web_hosts );
 
