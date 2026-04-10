@@ -63,6 +63,8 @@ $squarecandy_server_ips = array(
 
 $self_access = '(ip.src in {' . implode( ' ', $squarecandy_server_ips ) . '})';
 
+// Allow Google Calendar to access ical feeds
+$gcal = '(http.user_agent eq "Google-Calendar-Importer" and http.request.uri.query contains "ical=1")';
 
 // Allow Rules Free
 $allow_free            = array(
@@ -84,6 +86,7 @@ $allow_free            = array(
 	$asana,
 	$betteruptime,
 	$self_access,
+	$gcal,
 );
 $allow_expression_free = implode( ' or ', $allow_free );
 
