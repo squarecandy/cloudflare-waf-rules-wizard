@@ -395,6 +395,7 @@ $wp_path_strings = array(
 	'/.htaccess',       // Apache config probe
 	'.bak',             // backup file probes
 	'.sql',             // database dump exposure
+	'install.php',      // Block install.php. Minor security concern for edge cases where other WP things break.
 );
 
 $wp_paths = array_map(
