@@ -113,11 +113,83 @@ function pw_strip_readonly_rule_fields( $rule ) {
 	return $rule;
 }
 
+// Get the custom WAF ruleset ID for a zone, or null if none exists.
+function pw_get_ruleset_id( $zone_id, $headers ) {
+	$url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets";
+	$response = pw_make_curl_request( $url, 'GET', $headers );
+	if ( ! empty( $response['result'] ) ) {
+		foreach ( $response['result'] as $ruleset ) {
+			if ( 'zone' === $ruleset['kind'] && 'http_request_firewall_custom' === $ruleset['phase'] ) {
+				return $ruleset['id'];
+			}
+		}
+	}
+	return null;
+}
+
+// Create an empty custom WAF ruleset for a zone; returns the new ruleset ID or null.
+function pw_create_zone_ruleset( $zone_id, $headers ) {
+	$url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets";
+	$data     = array(
+		'name'  => 'Custom ruleset for http_request_firewall_custom phase',
+		'kind'  => 'zone',
+		'phase' => 'http_request_firewall_custom',
+	);
+	$response = pw_make_curl_request( $url, 'POST', $headers, $data );
+	return $response['result']['id'] ?? null;
+}
+
+// PUT a new set of rules into an existing ruleset; returns the API response.
+function pw_replace_ruleset( $zone_id, $ruleset_id, $headers, $rules ) {
+	$url  = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets/{$ruleset_id}";
+	$data = array( 'rules' => $rules );
+	return pw_make_curl_request( $url, 'PUT', $headers, $data );
+}
+
+// Apply a ruleset to a single zone. Returns ['success' => bool, 'message' => string].
+function pw_apply_ruleset_to_zone( $zone_id, $rules, $api_key, $email ) {
+	$headers    = array(
+		"X-Auth-Email: $email",
+		"X-Auth-Key: $api_key",
+		'Content-Type: application/json',
+	);
+	$ruleset_id = pw_get_ruleset_id( $zone_id, $headers );
+	if ( ! $ruleset_id ) {
+		$ruleset_id = pw_create_zone_ruleset( $zone_id, $headers );
+		if ( ! $ruleset_id ) {
+			return array(
+				'success' => false,
+				'message' => 'Failed to create ruleset.',
+			);
+		}
+	}
+	$existing_rules  = pw_get_existing_waf_rules( $zone_id, $api_key, $email );
+	$preserved_rules = array();
+	foreach ( $existing_rules as $rule ) {
+		if ( pw_is_custom_rule( $rule ) ) {
+			$preserved_rules[] = pw_strip_readonly_rule_fields( $rule );
+		}
+	}
+	$merged_rules = array_values( array_merge( $preserved_rules, $rules ) );
+	$response     = pw_replace_ruleset( $zone_id, $ruleset_id, $headers, $merged_rules );
+	if ( isset( $response['success'] ) && $response['success'] ) {
+		return array(
+			'success' => true,
+			'message' => 'Updated successfully.',
+		);
+	}
+	$err = isset( $response['errors'][0]['message'] ) ? $response['errors'][0]['message'] : 'Unknown error';
+	return array(
+		'success' => false,
+		'message' => $err,
+	);
+}
+
 function pw_cloudflare_ruleset_manager_process_zones( $rules = array() ) {
 	$email       = CLOUDFLARE_EMAIL;
 	$api_key     = CLOUDFLARE_API_KEY;
 	$account_ids = CLOUDFLARE_ACCOUNT_IDS;
-	$zone_ids    = isset( $_POST['pw_zone_ids'] ) ? $_POST['pw_zone_ids'] : array();
+	$zone_ids    = isset( $_POST['pw_zone_ids'] ) ? $_POST['pw_zone_ids'] : array(); // phpcs:ignore WordPress.Security.NonceVerification
 
 	if ( empty( $zone_ids ) ) {
 		echo '<div class="notice notice-error"><p>Please enter all the required fields.</p></div>';
@@ -129,89 +201,337 @@ function pw_cloudflare_ruleset_manager_process_zones( $rules = array() ) {
 		return;
 	}
 
-	$headers = array(
-		"X-Auth-Email: $email",
-		"X-Auth-Key: $api_key",
-		'Content-Type: application/json',
-	);
-
-	function pw_get_ruleset_id( $zone_id, $headers ) {
-		$url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets";
-		$response = pw_make_curl_request( $url, 'GET', $headers );
-
-		if ( ! empty( $response['result'] ) ) {
-			foreach ( $response['result'] as $ruleset ) {
-				if ( 'zone' === $ruleset['kind'] && 'http_request_firewall_custom' === $ruleset['phase'] ) {
-					return $ruleset['id'];
-				}
-			}
-		}
-		return null;
-	}
-
-	function pw_create_ruleset( $zone_id, $headers ) {
-		$url  = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets";
-		$data = array(
-			'name'  => 'Custom ruleset for http_request_firewall_custom phase',
-			'kind'  => 'zone',
-			'phase' => 'http_request_firewall_custom',
-		);
-
-		$response = pw_make_curl_request( $url, 'POST', $headers, $data );
-		return $response['result']['id'] ?? null;
-	}
-
-	function pw_replace_ruleset( $zone_id, $ruleset_id, $headers, $rules ) {
-		$url      = "https://api.cloudflare.com/client/v4/zones/{$zone_id}/rulesets/{$ruleset_id}";
-		$data     = array(
-			'rules' => $rules,
-		);
-		$response = pw_make_curl_request( $url, 'PUT', $headers, $data );
-		return $response;
-	}
-
 	$zones = pw_get_cloudflare_zones( $account_ids, $api_key, $email );
 
 	foreach ( $zone_ids as $zone_id ) {
 		$zone_name = '';
 		foreach ( $zones as $zone ) {
 			if ( $zone['id'] === $zone_id ) {
-				$zone_name = $zone['name'];
-				// escape the zone name for HTML output
-				$zone_name = htmlspecialchars( $zone_name, ENT_QUOTES, 'UTF-8' );
+				$zone_name = htmlspecialchars( $zone['name'], ENT_QUOTES, 'UTF-8' );
 				break;
 			}
 		}
 
-		$ruleset_id = pw_get_ruleset_id( $zone_id, $headers );
-
-		if ( ! $ruleset_id ) {
-			$ruleset_id = pw_create_ruleset( $zone_id, $headers );
-			if ( ! $ruleset_id ) {
-				echo '<div class="notice notice-error"><p>Failed to create ruleset for domain: ' . $zone_name . '</p></div>';
-				continue;
-			}
-		}
-
-		// Preserve any existing [CUSTOM] rules by prepending them before the API-managed rules.
-		$existing_rules  = pw_get_existing_waf_rules( $zone_id, $api_key, $email );
-		$preserved_rules = array();
-		foreach ( $existing_rules as $existing_rule ) {
-			if ( pw_is_custom_rule( $existing_rule ) ) {
-				$preserved_rules[] = pw_strip_readonly_rule_fields( $existing_rule );
-			}
-		}
-		$merged_rules = array_values( array_merge( $preserved_rules, $rules ) );
-
-		$response = pw_replace_ruleset( $zone_id, $ruleset_id, $headers, $merged_rules );
-		if ( isset( $response['success'] ) && $response['success'] ) {
+		$result = pw_apply_ruleset_to_zone( $zone_id, $rules, $api_key, $email );
+		if ( $result['success'] ) {
 			echo '<div class="notice notice-success"><p>Successfully updated ruleset for domain: ' . $zone_name . '</p></div>';
 		} else {
-			$error_message = isset( $response['errors'][0]['message'] ) ? $response['errors'][0]['message'] : 'Unknown error';
-			$error_message = htmlspecialchars( $error_message, ENT_QUOTES, 'UTF-8' );
+			$error_message = htmlspecialchars( $result['message'], ENT_QUOTES, 'UTF-8' );
 			echo '<div class="notice notice-error"><p>Failed to update ruleset for domain: ' . $zone_name . '. Error: ' . $error_message . '</p></div>';
 		}
 	}
+}
+
+// ---- WAF expression diff helpers ----
+
+// Split an expression string into clauses, using 'and'/'or' as line-break points.
+function pw_split_expr_into_clauses( $text ) {
+	$text        = preg_replace( '/\s+/', ' ', trim( $text ) );
+	$parts       = preg_split( '/\s+(and|or)\s+/i', $text, -1, PREG_SPLIT_DELIM_CAPTURE );
+	$clauses     = array();
+	$parts_count = count( $parts );
+	for ( $i = 0; $i < $parts_count; $i++ ) {
+		if ( 0 === $i ) {
+			$clauses[] = trim( $parts[ $i ] );
+		} elseif ( 1 === $i % 2 ) {
+			$connector = strtolower( trim( $parts[ $i ] ) );
+			$clause    = isset( $parts[ $i + 1 ] ) ? trim( $parts[ $i + 1 ] ) : '';
+			$clauses[] = $connector . ' ' . $clause;
+			$i++;
+		}
+	}
+	return array_values( array_filter( $clauses ) );
+}
+
+// LCS-based line diff: returns array of ['type' => same|removed|added, 'line' => string].
+function pw_lcs_diff( $old_arr, $new_arr ) {
+	$m  = count( $old_arr );
+	$n  = count( $new_arr );
+	$dp = array();
+	for ( $i = 0; $i <= $m; $i++ ) {
+		$dp[ $i ] = array_fill( 0, $n + 1, 0 );
+	}
+	for ( $i = 1; $i <= $m; $i++ ) {
+		for ( $j = 1; $j <= $n; $j++ ) {
+			if ( $old_arr[ $i - 1 ] === $new_arr[ $j - 1 ] ) {
+				$dp[ $i ][ $j ] = $dp[ $i - 1 ][ $j - 1 ] + 1;
+			} else {
+				$dp[ $i ][ $j ] = max( $dp[ $i - 1 ][ $j ], $dp[ $i ][ $j - 1 ] );
+			}
+		}
+	}
+	$diff = array();
+	$i    = $m;
+	$j    = $n;
+	while ( $i > 0 || $j > 0 ) {
+		if ( $i > 0 && $j > 0 && $old_arr[ $i - 1 ] === $new_arr[ $j - 1 ] ) {
+			array_unshift(
+				$diff,
+				array(
+					'type' => 'same',
+					'line' => $old_arr[ $i - 1 ],
+				)
+			);
+			$i--;
+			$j--;
+		} elseif ( $j > 0 && ( 0 === $i || $dp[ $i ][ $j - 1 ] >= $dp[ $i - 1 ][ $j ] ) ) {
+			array_unshift(
+				$diff,
+				array(
+					'type' => 'added',
+					'line' => $new_arr[ $j - 1 ],
+				)
+			);
+			$j--;
+		} else {
+			array_unshift(
+				$diff,
+				array(
+					'type' => 'removed',
+					'line' => $old_arr[ $i - 1 ],
+				)
+			);
+			$i--;
+		}
+	}
+	return $diff;
+}
+
+// Convert a linear LCS diff into paired side-by-side rows.
+function pw_diff_to_side_by_side( $diff_lines ) {
+	$rows        = array();
+	$removed_buf = array();
+	$added_buf   = array();
+
+	$flush = function () use ( &$rows, &$removed_buf, &$added_buf ) {
+		$max = max( count( $removed_buf ), count( $added_buf ) );
+		for ( $i = 0; $i < $max; $i++ ) {
+			$rows[] = array(
+				'left'       => isset( $removed_buf[ $i ] ) ? $removed_buf[ $i ] : '',
+				'right'      => isset( $added_buf[ $i ] ) ? $added_buf[ $i ] : '',
+				'left_type'  => isset( $removed_buf[ $i ] ) ? 'removed' : 'empty',
+				'right_type' => isset( $added_buf[ $i ] ) ? 'added' : 'empty',
+			);
+		}
+		$removed_buf = array();
+		$added_buf   = array();
+	};
+
+	foreach ( $diff_lines as $entry ) {
+		if ( 'same' === $entry['type'] ) {
+			$flush();
+			$rows[] = array(
+				'left'       => $entry['line'],
+				'right'      => $entry['line'],
+				'left_type'  => 'same',
+				'right_type' => 'same',
+			);
+		} elseif ( 'removed' === $entry['type'] ) {
+			$removed_buf[] = $entry['line'];
+		} elseif ( 'added' === $entry['type'] ) {
+			$added_buf[] = $entry['line'];
+		}
+	}
+	$flush();
+	return $rows;
+}
+
+// Generate a clause-by-clause diff for a Cloudflare expression or short action string.
+function pw_generate_char_diff( $old_text, $new_text ) {
+	$old_clauses = pw_split_expr_into_clauses( $old_text );
+	$new_clauses = pw_split_expr_into_clauses( $new_text );
+	if ( empty( $old_clauses ) ) {
+		$old_clauses = array( trim( $old_text ) );
+	}
+	if ( empty( $new_clauses ) ) {
+		$new_clauses = array( trim( $new_text ) );
+	}
+	return array( 'diff_rows' => pw_diff_to_side_by_side( pw_lcs_diff( $old_clauses, $new_clauses ) ) );
+}
+
+// Build the HTML diff block for a single zone's rules comparison.
+// Returns an HTML string ready to inject into .zone-diff-content.
+function pw_build_zone_diff_html( $zone_name, $new_rules, $existing_rules ) {
+	$custom_rules     = array_values( array_filter( $existing_rules, 'pw_is_custom_rule' ) );
+	$managed_existing = array_values(
+		array_filter(
+			$existing_rules,
+			function ( $r ) {
+				return ! pw_is_custom_rule( $r );
+			}
+		)
+	);
+
+	$new_rules_map      = array();
+	$existing_rules_map = array();
+	foreach ( $new_rules as $r ) {
+		$new_rules_map[ $r['description'] ?? '' ] = $r;
+	}
+	foreach ( $managed_existing as $r ) {
+		$existing_rules_map[ $r['description'] ?? '' ] = $r;
+	}
+
+	$matching        = 0;
+	$changing        = 0;
+	$adding          = 0;
+	$removing        = 0;
+	$preserved_count = count( $custom_rules );
+	foreach ( $managed_existing as $r ) {
+		$desc = $r['description'] ?? '';
+		if ( isset( $new_rules_map[ $desc ] ) ) {
+			$is_same = ( ( $r['action'] ?? '' ) === ( $new_rules_map[ $desc ]['action'] ?? '' ) )
+				&& ( ( $r['expression'] ?? '' ) === ( $new_rules_map[ $desc ]['expression'] ?? '' ) );
+			$is_same ? $matching++ : $changing++;
+		} else {
+			$removing++;
+		}
+	}
+	foreach ( $new_rules as $r ) {
+		if ( ! isset( $existing_rules_map[ $r['description'] ?? '' ] ) ) {
+			$adding++;
+		}
+	}
+
+	ob_start();
+	?>
+	<div class="zone-rules-comparison">
+		<div class="rules-summary">
+			<?php if ( 0 === count( $managed_existing ) ) : ?>
+				<span class="rule-stat rule-stat-adding">+ New zone — all <?php echo count( $new_rules ); ?> rules will be added</span>
+			<?php else : ?>
+				<?php if ( $matching > 0 ) : ?>
+					<span class="rule-stat rule-stat-matching">✓ <?php echo $matching; ?> matching</span>
+				<?php endif; ?>
+				<?php if ( $changing > 0 ) : ?>
+					<span class="rule-stat rule-stat-changing">↻ <?php echo $changing; ?> changing</span>
+				<?php endif; ?>
+				<?php if ( $adding > 0 ) : ?>
+					<span class="rule-stat rule-stat-adding">+ <?php echo $adding; ?> adding</span>
+				<?php endif; ?>
+				<?php if ( $removing > 0 ) : ?>
+					<span class="rule-stat rule-stat-removing">− <?php echo $removing; ?> removing</span>
+				<?php endif; ?>
+				<?php if ( $preserved_count > 0 ) : ?>
+					<span class="rule-stat rule-stat-preserved">⊙ <?php echo $preserved_count; ?> preserved</span>
+				<?php endif; ?>
+			<?php endif; ?>
+		</div>
+		<table class="rules-comparison-table">
+			<thead>
+				<tr><th>Status</th><th>Rule Description</th><th>Current Action</th><th>New Action</th></tr>
+			</thead>
+			<tbody>
+				<?php foreach ( $managed_existing as $existing_rule ) : ?>
+					<?php
+					$desc            = $existing_rule['description'] ?? 'Unnamed Rule';
+					$existing_action = $existing_rule['action'] ?? 'N/A';
+					$existing_expr   = $existing_rule['expression'] ?? '';
+					if ( isset( $new_rules_map[ $desc ] ) ) :
+						$new_action   = $new_rules_map[ $desc ]['action'] ?? 'N/A';
+						$new_expr     = $new_rules_map[ $desc ]['expression'] ?? '';
+						$is_identical = ( $existing_action === $new_action && $existing_expr === $new_expr );
+						$status_class = $is_identical ? 'matching' : 'changing';
+						$rule_row_id  = 'diff-' . md5( $zone_name . '-' . $desc );
+						?>
+						<tr class="rule-<?php echo $status_class; ?>">
+							<td class="rule-status">
+								<span class="status-badge status-<?php echo $status_class; ?>">
+									<?php echo $is_identical ? '✓ Match' : '↻ Change'; ?>
+								</span>
+							</td>
+							<td class="rule-description">
+								<strong><?php echo htmlspecialchars( $desc, ENT_QUOTES, 'UTF-8' ); ?></strong>
+								<?php if ( ! $is_identical ) : ?>
+									<button type="button" class="diff-toggle" onclick="toggleDiff(this,'<?php echo $rule_row_id; ?>')">
+										<span class="toggle-icon">▶</span><span class="toggle-text"> Show Diff</span>
+									</button>
+								<?php endif; ?>
+							</td>
+							<td class="rule-action"><?php echo htmlspecialchars( $existing_action, ENT_QUOTES, 'UTF-8' ); ?></td>
+							<td class="rule-action"><?php echo htmlspecialchars( $new_action, ENT_QUOTES, 'UTF-8' ); ?></td>
+						</tr>
+						<?php if ( ! $is_identical ) : ?>
+							<tr id="<?php echo $rule_row_id; ?>" class="diff-row" style="display:none;">
+								<td colspan="4">
+									<div class="diff-container">
+										<?php if ( $existing_expr !== $new_expr ) : ?>
+											<?php $expr_diff = pw_generate_char_diff( $existing_expr, $new_expr ); ?>
+											<div class="diff-section">
+												<h5>Expression Changes:</h5>
+												<table class="diff-side-by-side">
+													<thead><tr><th>Before</th><th>After</th></tr></thead>
+													<tbody>
+													<?php foreach ( $expr_diff['diff_rows'] as $row ) : ?>
+														<tr>
+															<td class="diff-cell diff-cell-<?php echo $row['left_type']; ?>"><?php echo htmlspecialchars( $row['left'], ENT_QUOTES, 'UTF-8' ); ?></td>
+															<td class="diff-cell diff-cell-<?php echo $row['right_type']; ?>"><?php echo htmlspecialchars( $row['right'], ENT_QUOTES, 'UTF-8' ); ?></td>
+														</tr>
+													<?php endforeach; ?>
+													</tbody>
+												</table>
+											</div>
+										<?php endif; ?>
+										<?php if ( $existing_action !== $new_action ) : ?>
+											<?php $action_diff = pw_generate_char_diff( $existing_action, $new_action ); ?>
+											<div class="diff-section">
+												<h5>Action Changes:</h5>
+												<table class="diff-side-by-side">
+													<thead><tr><th>Before</th><th>After</th></tr></thead>
+													<tbody>
+													<?php foreach ( $action_diff['diff_rows'] as $row ) : ?>
+														<tr>
+															<td class="diff-cell diff-cell-<?php echo $row['left_type']; ?>"><?php echo htmlspecialchars( $row['left'], ENT_QUOTES, 'UTF-8' ); ?></td>
+															<td class="diff-cell diff-cell-<?php echo $row['right_type']; ?>"><?php echo htmlspecialchars( $row['right'], ENT_QUOTES, 'UTF-8' ); ?></td>
+														</tr>
+													<?php endforeach; ?>
+													</tbody>
+												</table>
+											</div>
+										<?php endif; ?>
+									</div>
+								</td>
+							</tr>
+						<?php endif; ?>
+					<?php else : ?>
+						<tr class="rule-removing">
+							<td class="rule-status"><span class="status-badge status-removing">− Remove</span></td>
+							<td class="rule-description"><strong><?php echo htmlspecialchars( $desc, ENT_QUOTES, 'UTF-8' ); ?></strong></td>
+							<td class="rule-action"><?php echo htmlspecialchars( $existing_action, ENT_QUOTES, 'UTF-8' ); ?></td>
+							<td class="rule-action"><em>—</em></td>
+						</tr>
+					<?php endif; ?>
+				<?php endforeach; ?>
+				<?php foreach ( $new_rules as $new_rule ) : ?>
+					<?php
+					$desc = $new_rule['description'] ?? 'Unnamed Rule';
+					if ( ! isset( $existing_rules_map[ $desc ] ) ) :
+						$new_action = $new_rule['action'] ?? 'N/A';
+						?>
+						<tr class="rule-adding">
+							<td class="rule-status"><span class="status-badge status-adding">+ Add</span></td>
+							<td class="rule-description"><strong><?php echo htmlspecialchars( $desc, ENT_QUOTES, 'UTF-8' ); ?></strong></td>
+							<td class="rule-action"><em>—</em></td>
+							<td class="rule-action"><?php echo htmlspecialchars( $new_action, ENT_QUOTES, 'UTF-8' ); ?></td>
+						</tr>
+					<?php endif; ?>
+				<?php endforeach; ?>
+				<?php foreach ( $custom_rules as $custom_rule ) : ?>
+					<?php
+					$desc          = $custom_rule['description'] ?? 'Unnamed Rule';
+					$custom_action = $custom_rule['action'] ?? 'N/A';
+					?>
+					<tr class="rule-preserved">
+						<td class="rule-status"><span class="status-badge status-preserved">⊙ Preserved</span></td>
+						<td class="rule-description"><strong><?php echo htmlspecialchars( $desc, ENT_QUOTES, 'UTF-8' ); ?></strong></td>
+						<td class="rule-action"><?php echo htmlspecialchars( $custom_action, ENT_QUOTES, 'UTF-8' ); ?></td>
+						<td class="rule-action"><?php echo htmlspecialchars( $custom_action, ENT_QUOTES, 'UTF-8' ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+	</div>
+	<?php
+	return ob_get_clean();
 }
 
 // New function to get security feature status for a zone

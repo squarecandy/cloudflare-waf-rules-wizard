@@ -968,8 +968,8 @@ textarea {
 }
 
 /* ============================================================
-   Cache controls bar (shared across WAF, Security, Proxy pages)
-   ============================================================ */
+	Cache controls bar (shared across WAF, Security, Proxy pages)
+	============================================================ */
 
 .cache-controls {
 	display: flex;
@@ -999,8 +999,8 @@ textarea {
 }
 
 /* ============================================================
-   View Rulesets page
-   ============================================================ */
+	View Rulesets page
+	============================================================ */
 
 .page-intro {
 	color: #666;
@@ -1120,8 +1120,8 @@ textarea {
 }
 
 /* ============================================================
-   WAF Rules Manager — grouped sections
-   ============================================================ */
+	WAF Rules Manager — grouped sections
+	============================================================ */
 
 .waf-group {
 	margin: 0 0 2em 0;
@@ -1192,3 +1192,45 @@ textarea {
 .manual-override select {
 	margin: 0 0 0.5em 0;
 }
+
+/* ---- Async confirmation screen (WAF apply) ---- */
+.confirmation-screen { max-width: 1000px; }
+.confirmation-screen h2 { margin-bottom: 0.75em; }
+
+#diff-load-status { color: #555; font-style: italic; margin-bottom: 1em; }
+
+.zone-diff-blocks { margin-bottom: 1.5em; }
+
+.zone-diff-block {
+	margin: 0 0 1.25em 0;
+	padding: 1em 1.25em;
+	background: #fff;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+}
+
+.zone-diff-heading {
+	margin: 0 0 0.75em 0;
+	font-size: 1.05em;
+	border-bottom: 1px solid #eee;
+	padding-bottom: 0.4em;
+}
+
+.zone-diff-content { margin-bottom: 0.5em; }
+
+.zone-diff-spinner { color: #888; font-style: italic; }
+
+.zone-apply-result { margin-top: 0.5em; }
+.zone-apply-result .notice { margin: 0; padding: 0.5em 0.75em; }
+
+.zone-applying { color: #888; font-style: italic; }
+
+.confirmation-actions {
+	display: flex;
+	gap: 0.75em;
+	align-items: center;
+	flex-wrap: wrap;
+	padding-top: 0.5em;
+}
+
+#apply-progress-msg { font-weight: 600; }

@@ -71,6 +71,80 @@ if ( 'refresh_nginx_rules' === $setting ) {
 	exit;
 }
 
+// Fetch diff HTML for a single zone — read-only, no API writes.
+if ( 'get_zone_diff' === $setting ) {
+	$zone_id      = isset( $_POST['zone_id'] ) ? preg_replace( '/[^a-zA-Z0-9]/', '', $_POST['zone_id'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification,WordPress.Security.ValidatedSanitizedInput
+	$ruleset_name = isset( $_POST['ruleset'] ) ? preg_replace( '/[^a-z0-9_]/', '', $_POST['ruleset'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification,WordPress.Security.ValidatedSanitizedInput
+	if ( empty( $zone_id ) || empty( $ruleset_name ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Missing zone_id or ruleset.',
+			)
+		);
+		exit;
+	}
+	require_once 'rules.php';
+	if ( ! isset( $rulesets[ $ruleset_name ] ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Invalid ruleset.',
+			)
+		);
+		exit;
+	}
+	$new_rules   = array_values( $rulesets[ $ruleset_name ]['rules'] );
+	$zones_cache = pw_cache_get( 'zones' );
+	$zone_name   = $zone_id;
+	if ( $zones_cache ) {
+		foreach ( $zones_cache as $z ) {
+			if ( $z['id'] === $zone_id ) {
+				$zone_name = $z['name'];
+				break;
+			}
+		}
+	}
+	$existing_rules = pw_get_existing_waf_rules( $zone_id, CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL );
+	$html           = pw_build_zone_diff_html( $zone_name, $new_rules, $existing_rules );
+	echo json_encode(
+		array(
+			'success' => true,
+			'html'    => $html,
+		)
+	);
+	exit;
+}
+
+// Apply a ruleset to a single zone via API.
+if ( 'apply_zone_ruleset' === $setting ) {
+	$zone_id      = isset( $_POST['zone_id'] ) ? preg_replace( '/[^a-zA-Z0-9]/', '', $_POST['zone_id'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification,WordPress.Security.ValidatedSanitizedInput
+	$ruleset_name = isset( $_POST['ruleset'] ) ? preg_replace( '/[^a-z0-9_]/', '', $_POST['ruleset'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification,WordPress.Security.ValidatedSanitizedInput
+	if ( empty( $zone_id ) || empty( $ruleset_name ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Missing zone_id or ruleset.',
+			)
+		);
+		exit;
+	}
+	require_once 'rules.php';
+	if ( ! isset( $rulesets[ $ruleset_name ] ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Invalid ruleset.',
+			)
+		);
+		exit;
+	}
+	$rules  = array_values( $rulesets[ $ruleset_name ]['rules'] );
+	$result = pw_apply_ruleset_to_zone( $zone_id, $rules, CLOUDFLARE_API_KEY, CLOUDFLARE_EMAIL );
+	echo json_encode( $result );
+	exit;
+}
+
 // Refresh zones list (used by WAF Rules, Security Status, Proxy Status pages).
 if ( 'refresh_zones' === $setting ) {
 	$zones = pw_get_cloudflare_zones(
