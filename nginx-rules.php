@@ -7,10 +7,7 @@
 
 defined( 'CLOUDFLARE_API_KEY' ) || exit( 'No direct script access allowed' );
 
-// ── Regenerate both conf files ────────────────────────────────────────────────
-require_once __DIR__ . '/generate-nginx-rules.php';
-
-// ── Read generated files ──────────────────────────────────────────────────────
+// ── Read existing generated files (no auto-regeneration) ─────────────────────
 $nginx_dir     = __DIR__ . '/nginx';
 $file_standard = $nginx_dir . '/bot-blocking.conf';
 $file_wp_login = $nginx_dir . '/bot-blocking-wp-login.conf';
@@ -21,8 +18,19 @@ $generated_at  = file_exists( $file_standard ) ? date( 'Y-m-d H:i:s', filemtime(
 ?>
 
 <h2>Nginx Bot-Blocking Rules</h2>
-<p>Rules are regenerated from <code>rules.php</code> each time this page is loaded. Copy the appropriate file contents into your nginx server block via an <code>include</code> directive.</p>
-<p class="nginx-meta">Last generated: <strong><?php echo htmlspecialchars( $generated_at, ENT_QUOTES, 'UTF-8' ); ?></strong></p>
+<p>Copy the appropriate file contents into your nginx server block via an <code>include</code> directive. Click <strong>Regenerate</strong> to rebuild the conf files from the current <code>rules.php</code>.</p>
+
+<div class="cache-controls">
+	<?php if ( file_exists( $file_standard ) ) : ?>
+		<span class="cache-age">Last generated: <strong><?php echo htmlspecialchars( $generated_at, ENT_QUOTES, 'UTF-8' ); ?></strong></span>
+	<?php else : ?>
+		<span class="cache-age cache-age-empty">Conf files not yet generated.</span>
+	<?php endif; ?>
+	<button id="regenerate-nginx-btn" class="button-secondary btn-refresh">
+		<span class="btn-icon">↻</span> Regenerate
+	</button>
+	<span id="regenerate-nginx-msg" class="cache-age" style="display:none;"></span>
+</div>
 
 <div class="nginx-tabs">
 	<div class="nginx-tab-buttons">
@@ -229,5 +237,40 @@ $generated_at  = file_exists( $file_standard ) ? date( 'Y-m-d H:i:s', filemtime(
 			});
 		});
 	});
+
+	// Regenerate nginx conf files
+	var regenBtn = document.getElementById('regenerate-nginx-btn');
+	var regenMsg = document.getElementById('regenerate-nginx-msg');
+	if (regenBtn) {
+		regenBtn.addEventListener('click', function () {
+			regenBtn.disabled = true;
+			regenBtn.innerHTML = '<span class="btn-icon">↻</span> Regenerating…';
+			regenMsg.style.display = 'none';
+			var formData = new FormData();
+			formData.append('setting', 'refresh_nginx_rules');
+			fetch('ajax-handler.php', {
+				method: 'POST',
+				body: formData,
+				headers: { 'X-Requested-With': 'XMLHttpRequest' }
+			})
+			.then(function (r) { return r.json(); })
+			.then(function (data) {
+				if (data.success) {
+					location.reload();
+				} else {
+					regenMsg.textContent = data.message || 'Regeneration failed.';
+					regenMsg.style.display = 'inline';
+					regenBtn.disabled = false;
+					regenBtn.innerHTML = '<span class="btn-icon">↻</span> Regenerate';
+				}
+			})
+			.catch(function () {
+				regenMsg.textContent = 'Network error.';
+				regenMsg.style.display = 'inline';
+				regenBtn.disabled = false;
+				regenBtn.innerHTML = '<span class="btn-icon">↻</span> Regenerate';
+			});
+		});
+	}
 }());
 </script>

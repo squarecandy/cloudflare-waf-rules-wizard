@@ -48,7 +48,9 @@ $setting = $_POST['setting'];
 
 // Regenerate nginx conf files from rules.php (no API call needed).
 if ( 'refresh_nginx_rules' === $setting ) {
+	ob_start();
 	require_once 'generate-nginx-rules.php';
+	ob_end_clean();
 	$file_standard = __DIR__ . '/nginx/bot-blocking.conf';
 	if ( file_exists( $file_standard ) ) {
 		echo json_encode(
