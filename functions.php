@@ -106,8 +106,9 @@ function pw_is_custom_rule( $rule ) {
 
 // Strips Cloudflare read-only fields from a rule so it can be re-submitted in a PUT payload.
 function pw_strip_readonly_rule_fields( $rule ) {
-	$readonly_fields = array( 'id', 'version', 'last_updated', 'ref', 'last_updated_index' );
-	foreach ( $readonly_fields as $field ) {
+	// 'notes' is a local-only field used by this tool; it is not a valid CF API field.
+	$remove_fields = array( 'id', 'version', 'last_updated', 'ref', 'last_updated_index', 'notes' );
+	foreach ( $remove_fields as $field ) {
 		unset( $rule[ $field ] );
 	}
 	return $rule;
@@ -170,7 +171,9 @@ function pw_apply_ruleset_to_zone( $zone_id, $rules, $api_key, $email ) {
 			$preserved_rules[] = pw_strip_readonly_rule_fields( $rule );
 		}
 	}
-	$merged_rules = array_values( array_merge( $preserved_rules, $rules ) );
+	// Strip local-only fields (e.g. 'notes') from new rules before sending to CF API.
+	$clean_rules  = array_map( 'pw_strip_readonly_rule_fields', $rules );
+	$merged_rules = array_values( array_merge( $preserved_rules, $clean_rules ) );
 	$response     = pw_replace_ruleset( $zone_id, $ruleset_id, $headers, $merged_rules );
 	if ( isset( $response['success'] ) && $response['success'] ) {
 		return array(
