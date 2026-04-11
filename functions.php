@@ -1120,7 +1120,7 @@ function pw_create_account_list( $account_id, $api_key, $api_email ) {
 	$url     = "https://api.cloudflare.com/client/v4/accounts/{$account_id}/rules/lists";
 	$data    = array(
 		'name'        => $list_id,
-		'description' => 'IPs banned by fail2ban \u2014 managed automatically by cloudflare-fail2ban',
+		'description' => 'IPs banned by fail2ban, managed automatically by cloudflare-fail2ban',
 		'kind'        => 'ip',
 	);
 
