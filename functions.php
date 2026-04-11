@@ -395,9 +395,10 @@ function pw_build_zone_diff_html( $zone_name, $new_rules, $existing_rules ) {
 		}
 	}
 
+	$is_identical = ( 0 === $changing && 0 === $adding && 0 === $removing && count( $managed_existing ) > 0 );
 	ob_start();
 	?>
-	<div class="zone-rules-comparison">
+	<div class="zone-rules-comparison" data-zone-identical="<?php echo $is_identical ? 'true' : 'false'; ?>">
 		<div class="rules-summary">
 			<?php if ( 0 === count( $managed_existing ) ) : ?>
 				<span class="rule-stat rule-stat-adding">+ New zone — all <?php echo count( $new_rules ); ?> rules will be added</span>

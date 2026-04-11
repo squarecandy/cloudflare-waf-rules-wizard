@@ -88,6 +88,7 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 			const progressMsg = document.getElementById('apply-progress-msg');
 			const ruleset = applyBtn.dataset.ruleset;
 			let loadedCount = 0;
+			let cancelled = false;
 
 			function toggleDiff(btn, id) {
 				const row = document.getElementById(id);
@@ -104,6 +105,19 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 				}
 			}
 			window.toggleDiff = toggleDiff;
+
+			function showCancelOverlay(msg) {
+				let ov = document.getElementById('waf-cancel-overlay');
+				if (!ov) {
+					ov = document.createElement('div');
+					ov.id = 'waf-cancel-overlay';
+					ov.innerHTML = '<div class="overlay-box"><span class="overlay-msg"></span></div>';
+					document.body.appendChild(ov);
+				}
+				ov.querySelector('.overlay-msg').textContent = msg;
+				ov.style.opacity = '1';
+				return ov;
+			}
 
 			function markLoaded() {
 				loadedCount++;
@@ -132,6 +146,9 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 						contentEl.innerHTML = data.success
 							? data.html
 							: '<p class="notice notice-error">' + (data.message || 'Failed to load diff.') + '</p>';
+						if (data.success && contentEl.querySelector('[data-zone-identical="true"]')) {
+							block.dataset.identical = 'true';
+						}
 					} catch (e) {
 						contentEl.innerHTML = '<p class="notice notice-error">Network error loading diff.</p>';
 					}
@@ -139,14 +156,46 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 				}
 			}());
 
+			function cancelApply() {
+				cancelled = true;
+				const ov = showCancelOverlay('Cancelling…');
+				setTimeout(function () {
+					ov.querySelector('.overlay-msg').textContent = '✗ Cancelled';
+					setTimeout(function () {
+						ov.style.transition = 'opacity .4s';
+						ov.style.opacity = '0';
+						setTimeout(function () { ov.remove(); }, 450);
+					}, 5000);
+				}, 700);
+				progressMsg.innerHTML = '<strong style="color:#a00">⚠ Cancelled — changes applied so far were saved.</strong>';
+				applyBtn.disabled = false;
+				applyBtn.textContent = '↻ Retry Remaining Zones';
+			}
+
+			document.addEventListener('keydown', function (e) {
+				if (e.key === 'Escape' && applyBtn.disabled && cancelled === false) {
+					cancelApply();
+				}
+			});
+
 			applyBtn.addEventListener('click', async function () {
 				applyBtn.disabled = true;
+				cancelled = false;
 				progressMsg.textContent = '';
-				let applied = 0, failed = 0;
+				let applied = 0, failed = 0, skipped = 0;
 
 				for (const block of blocks) {
+					if (cancelled) { break; }
 					const zoneId = block.dataset.zoneId;
 					const resultEl = block.querySelector('.zone-apply-result');
+					// Skip zones already successfully applied or confirmed identical on a previous run.
+					if (resultEl.querySelector('.notice-success, .zone-no-change')) { applied++; continue; }
+					// Skip zones where diff shows rules are already up to date.
+					if (block.dataset.identical === 'true') {
+						resultEl.innerHTML = '<div class="notice zone-no-change"><p>— Already up to date, skipped.</p></div>';
+						skipped++;
+						continue;
+					}
 					resultEl.innerHTML = '<span class="zone-applying">↻ Applying…</span>';
 					block.scrollIntoView({behavior: 'smooth', block: 'nearest'});
 					try {
@@ -172,10 +221,12 @@ if ( isset( $_POST['pw_create_ruleset'] ) && isset( $_POST['pw_ruleset'] ) && ! 
 					}
 				}
 
+				if (cancelled) { return; }
+				const skipNote = skipped > 0 ? ', ' + skipped + ' already up to date' : '';
 				if (failed === 0) {
-					progressMsg.innerHTML = '<strong style="color:#175319">✓ All ' + applied + ' zones updated.</strong>';
+					progressMsg.innerHTML = '<strong style="color:#175319">✓ Done — ' + applied + ' updated' + skipNote + '.</strong>';
 				} else {
-					progressMsg.innerHTML = '<strong style="color:#a00">⚠ ' + applied + ' updated, ' + failed + ' failed — check above.</strong>';
+					progressMsg.innerHTML = '<strong style="color:#a00">⚠ ' + applied + ' updated, ' + failed + ' failed' + skipNote + ' — check above.</strong>';
 					applyBtn.disabled = false;
 					applyBtn.textContent = '↻ Retry Failed Zones';
 				}
