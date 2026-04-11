@@ -26,10 +26,13 @@ require_once 'config.php';
 		<h1>Cloudflare WAF Rules Wizard</h1>
 		<?php
 		// Navigation
-		$current_page = isset( $_GET['page'] ) ? $_GET['page'] : 'waf-rules';
+		$current_page = isset( $_GET['page'] ) ? $_GET['page'] : 'view-rulesets';
 		?>
 		<div class="nav-container">
 			<ul class="nav-menu">
+				<li class="<?php echo 'view-rulesets' === $current_page ? 'active' : ''; ?>">
+					<a href="index.php?page=view-rulesets">View Rulesets</a>
+				</li>
 				<li class="<?php echo 'waf-rules' === $current_page ? 'active' : ''; ?>">
 					<a href="index.php?page=waf-rules">WAF Rules Manager</a>
 				</li>
@@ -64,6 +67,7 @@ require_once 'config.php';
 
 		require_once 'rules.php';
 		require_once 'functions.php';
+		require_once 'cache.php';
 
 		// Load the appropriate page content
 		if ( 'security-status' === $current_page ) {
@@ -74,8 +78,10 @@ require_once 'config.php';
 			include 'nginx-rules.php';
 		} elseif ( 'fail2ban-setup' === $current_page ) {
 			include 'fail2ban-setup.php';
-		} else { // Default to WAF Rules page
+		} elseif ( 'waf-rules' === $current_page ) {
 			include 'waf-rules.php';
+		} else { // Default: View Rulesets
+			include 'view-rulesets.php';
 		}
 		?>
 		<p>&nbsp;</p>

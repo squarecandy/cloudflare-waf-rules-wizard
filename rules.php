@@ -483,6 +483,7 @@ $login_protection = '(' . implode(
 $squarecandy_rules_free = array(
 	'good_actors_allow'       => array(
 		'description'       => 'Good Actors Allow',
+		'notes'             => 'Skips all WAF checks for trusted bots and known services: Google, Bing, DuckDuckGo, page preview crawlers, Wayback Machine, accessibility bots, UptimeRobot, Ping, Let\'s Encrypt, Stripe, EWWW/ExactDN, Cloudflare Observatory, GitHub Actions, Asana, Better Uptime, and Square Candy server IPs.',
 		'expression'        => $allow_expression_free,
 		'action'            => 'skip',
 		'action_parameters' => array(
@@ -493,16 +494,19 @@ $squarecandy_rules_free = array(
 	),
 	'block_paths'             => array(
 		'description' => 'Block WP Paths, Drupal, AI Crawlers, Fail2ban',
+		'notes'       => 'Blocks requests to sensitive WordPress paths (xmlrpc, wp-config, .env, .git, etc.), Drupal-specific paths, AI training crawlers (by Cloudflare bot category), the FUCKYOUWAF probe string, and IPs banned by fail2ban.',
 		'expression'  => $wp_paths . ' or ' . $drupal . ' or ' . $ai_crawlers . ' or ' . $fu_waf . ' or ' . $fail2ban_block,
 		'action'      => 'block',
 	),
 	'block_crawlers'          => array(
 		'description' => 'Block Aggressive Crawlers',
+		'notes'       => 'Blocks SEO scrapers, AI training bots (CCBot, GPTBot, ClaudeBot, ByteDance, etc.), and other aggressive user agents by user agent string match. Does not block AI retrieval bots (chatgpt-user, claude-web, perplexity-user) which drive authoritative referral traffic.',
 		'expression'  => $aggressive_crawlers,
 		'action'      => 'block',
 	),
 	'managed_challenge_hosts' => array(
 		'description' => 'Managed Challenge Web Hosts, Cloud Providers, TOR',
+		'notes'       => 'Issues a managed challenge to traffic from cloud/hosting ASNs (AWS, GCP, Azure, DigitalOcean, OVH, Hetzner, etc.), TOR exit nodes, requests with a spoofed Chrome UA (missing sec-ch-ua header), and login page requests.',
 		'expression'  => $challenge_asns . ' or ' . $tor . ' or ' . $fake_chrome . ' or ' . $login_protection,
 		'action'      => 'managed_challenge',
 	),
@@ -514,6 +518,7 @@ $squarecandy_rules_free_ecommmerce['good_actors_allow']['expression'] = $allow_e
 $squarecandy_rules_pro = array(
 	array(
 		'description'       => 'Good Actors Allow',
+		'notes'             => 'Skips all WAF checks for trusted bots and known services, including ecommerce integrations: Zenventory, Salesforce WooCommerce, and Salesforce GiveWP API calls in addition to the standard free-tier allowlist.',
 		'expression'        => $allow_expression_ecommerce,
 		'action'            => 'skip',
 		'action_parameters' => array(
@@ -524,46 +529,55 @@ $squarecandy_rules_pro = array(
 	),
 	'block_wp_paths'          => array(
 		'description' => 'Block WP Paths, Fail2ban',
+		'notes'       => 'Blocks sensitive WordPress paths (xmlrpc, wp-config, .env, .git, readme.html, etc.), the FUCKYOUWAF probe string, and IPs banned by fail2ban.',
 		'expression'  => $wp_paths . ' or ' . $fu_waf . ' or ' . $fail2ban_block,
 		'action'      => 'block',
 	),
 	'block_drupal_paths'      => array(
-		'description' => 'Block Old Druapl Paths',
+		'description' => 'Block Old Drupal Paths',
+		'notes'       => 'Blocks Drupal-specific paths (/sites/default/files/, /sites/all/, /node, /civicrm, /javascript) that are common probe targets on non-Drupal sites.',
 		'expression'  => $drupal,
 		'action'      => 'block',
 	),
 	'block_ai'                => array(
 		'description' => 'Block AI Crawlers',
+		'notes'       => 'Blocks AI training crawlers by Cloudflare bot category ("AI Crawler" and "Other"), excluding archive.org.',
 		'expression'  => $ai_crawlers,
 		'action'      => 'block',
 	),
 	'block_crawlers'          => array(
 		'description' => 'Block Aggressive Crawlers',
+		'notes'       => 'Pro tier: full combined crawler blocklist with no character limit. Includes all free-tier entries plus additional low-priority scrapers and AI training bots.',
 		'expression'  => $aggressive_crawlers_pro,
 		'action'      => 'block',
 	),
 	'managed_challenge_hosts' => array(
 		'description' => 'Managed Challenge Web Hosts',
+		'notes'       => 'Issues a managed challenge to traffic originating from web hosting provider ASNs (GoDaddy, DigitalOcean, OVH, Hetzner, Linode, Vultr, Contabo, etc.).',
 		'expression'  => '(ip.src.asnum in {' . $web_hosts . '})',
 		'action'      => 'managed_challenge',
 	),
 	'managed_challenge_cloud' => array(
 		'description' => 'Managed Challenge Cloud Providers',
+		'notes'       => 'Issues a managed challenge to traffic from major cloud ASNs (AWS, Google Cloud, Azure, etc.) that is not a verified bot.',
 		'expression'  => '(ip.src.asnum in {' . $cloud_asns . '} and not cf.client.bot and not cf.verified_bot_category in {"Search Engine Crawler" "Search Engine Optimization" "Monitoring & Analytics" "Advertising & Marketing" "Page Preview" "Academic Research" "Security" "Accessibility" "Webhooks" "Feed Fetcher" "Aggregator"})',
 		'action'      => 'managed_challenge',
 	),
 	'managed_challenge_tor'   => array(
 		'description' => 'Managed Challenge TOR',
+		'notes'       => 'Issues a managed challenge to all TOR exit node traffic (country code T1).',
 		'expression'  => $tor,
 		'action'      => 'managed_challenge',
 	),
 	'login_protection'        => array(
 		'description' => 'Login Protection',
+		'notes'       => 'Issues a managed challenge on /wp-login.php, /user, and /login/ — excluding logout and postpass actions.',
 		'expression'  => $login_protection,
 		'action'      => 'managed_challenge',
 	),
 	'fake_chrome'             => array(
 		'description' => 'Managed Challenge Fake Chrome UA',
+		'notes'       => 'Detects requests claiming to be recent Chrome versions but missing the sec-ch-ua client hint header — a strong signal of bot/scraper traffic spoofing a browser UA.',
 		'expression'  => $fake_chrome,
 		'action'      => 'managed_challenge',
 	),
@@ -572,6 +586,7 @@ $squarecandy_rules_pro = array(
 $squarecandy_rules_drupal = array(
 	'good_actors_allow'       => array(
 		'description'       => 'Good Actors Allow',
+		'notes'             => 'Same allowlist as the free WordPress ruleset — trusted bots and known services bypass all WAF checks.',
 		'expression'        => $allow_expression_free,
 		'action'            => 'skip',
 		'action_parameters' => array(
@@ -582,16 +597,19 @@ $squarecandy_rules_drupal = array(
 	),
 	'block_paths'             => array(
 		'description' => 'Block WP Paths, AI Crawlers, Fail2ban',
+		'notes'       => 'Blocks sensitive WordPress paths, AI training crawlers by Cloudflare bot category, the FUCKYOUWAF probe string, and fail2ban-banned IPs. Drupal paths are intentionally NOT blocked here since this is a Drupal site.',
 		'expression'  => $wp_paths . ' or ' . $ai_crawlers . ' or ' . $fu_waf . ' or ' . $fail2ban_block,
 		'action'      => 'block',
 	),
 	'block_crawlers'          => array(
 		'description' => 'Block Aggressive Crawlers',
+		'notes'       => 'Same aggressive crawler blocklist as the free WordPress ruleset.',
 		'expression'  => $aggressive_crawlers,
 		'action'      => 'block',
 	),
 	'managed_challenge_hosts' => array(
 		'description' => 'Managed Challenge Web Hosts, Cloud Providers, TOR',
+		'notes'       => 'Same challenge rules as the free WordPress ruleset: hosting ASNs, cloud providers, TOR exit nodes, fake Chrome UAs, and login page protection.',
 		'expression'  => $challenge_asns . ' or ' . $tor . ' or ' . $fake_chrome . ' or ' . $login_protection,
 		'action'      => 'managed_challenge',
 	),

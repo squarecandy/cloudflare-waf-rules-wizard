@@ -5,9 +5,24 @@
 
 // Direct access protection
 defined( 'CLOUDFLARE_API_KEY' ) || exit( 'No direct script access allowed' );
+
+$cached_zones = pw_cache_get( 'zones' );
+$cached_proxy = pw_cache_get( 'proxy_status' );
+$cache_age    = pw_cache_age_label( 'proxy_status' );
 ?>
 
 <h2>Cloudflare DNS Proxy Status</h2>
+
+<div class="cache-controls">
+	<?php if ( $cache_age ) : ?>
+		<span class="cache-age">Last refreshed: <?php echo esc_html( $cache_age ); ?></span>
+	<?php else : ?>
+		<span class="cache-age cache-age-empty">No data cached yet.</span>
+	<?php endif; ?>
+	<button id="refresh-proxy-btn" class="button-secondary btn-refresh">
+		<span class="btn-icon">↻</span> Refresh Data
+	</button>
+</div>
 
 <div id="ajax-message" class="notice hidden">
 	<p id="ajax-message-text"></p>
@@ -40,79 +55,75 @@ defined( 'CLOUDFLARE_API_KEY' ) || exit( 'No direct script access allowed' );
 	</div>
 </div>
 
-<?php
-$zones = pw_get_cloudflare_zones(
-	CLOUDFLARE_ACCOUNT_IDS,
-	CLOUDFLARE_API_KEY,
-	CLOUDFLARE_EMAIL
-);
+<?php if ( ! $cached_zones || ! $cached_proxy ) : ?>
+	<div class="notice notice-info">
+		<p>No cached data available. Click <strong>Refresh Data</strong> to load DNS proxy records from the Cloudflare API.</p>
+	</div>
+<?php else : ?>
+	<?php foreach ( $cached_zones as $zone ) : ?>
+		<?php
+		$zone_id     = $zone['id'];
+		$dns_records = isset( $cached_proxy[ $zone_id ] ) ? $cached_proxy[ $zone_id ] : array();
+		?>
 
-foreach ( $zones as $zone ) :
-	$zone_id     = $zone['id'];
-	$dns_records = pw_get_zone_dns_records(
-		$zone_id,
-		CLOUDFLARE_API_KEY,
-		CLOUDFLARE_EMAIL
-	);
-	?>
+		<div class="zone-section" data-zone-id="<?php echo htmlspecialchars( $zone_id, ENT_QUOTES, 'UTF-8' ); ?>">
+			<div class="zone-header">
+				<div class="zone-info">
+					<h3><?php echo htmlspecialchars( $zone['name'], ENT_QUOTES, 'UTF-8' ); ?></h3>
+					<p class="zone-id-display">Zone ID: <code><?php echo htmlspecialchars( $zone_id, ENT_QUOTES, 'UTF-8' ); ?></code></p>
+				</div>
+				<div class="zone-controls">
+					<button class="zone-disable-btn button-danger-small" data-zone-id="<?php echo htmlspecialchars( $zone_id, ENT_QUOTES, 'UTF-8' ); ?>" data-zone-name="<?php echo htmlspecialchars( $zone['name'], ENT_QUOTES, 'UTF-8' ); ?>" disabled>
+						<span class="btn-icon">🚫</span> Disable All
+					</button>
+					<button class="zone-restore-btn button-secondary-small" data-zone-id="<?php echo htmlspecialchars( $zone_id, ENT_QUOTES, 'UTF-8' ); ?>" data-zone-name="<?php echo htmlspecialchars( $zone['name'], ENT_QUOTES, 'UTF-8' ); ?>">
+						<span class="btn-icon">⏮</span> Restore
+					</button>
+				</div>
+			</div>
 
-	<div class="zone-section" data-zone-id="<?php echo htmlspecialchars( $zone_id ); ?>">
-		<div class="zone-header">
-			<div class="zone-info">
-				<h3><?php echo htmlspecialchars( $zone['name'] ); ?></h3>
-				<p class="zone-id-display">Zone ID: <code><?php echo htmlspecialchars( $zone_id ); ?></code></p>
-			</div>
-			<div class="zone-controls">
-				<button class="zone-disable-btn button-danger-small" data-zone-id="<?php echo htmlspecialchars( $zone_id ); ?>" data-zone-name="<?php echo htmlspecialchars( $zone['name'] ); ?>" disabled>
-					<span class="btn-icon">🚫</span> Disable All
-				</button>
-				<button class="zone-restore-btn button-secondary-small" data-zone-id="<?php echo htmlspecialchars( $zone_id ); ?>" data-zone-name="<?php echo htmlspecialchars( $zone['name'] ); ?>">
-					<span class="btn-icon">⏮</span> Restore
-				</button>
-			</div>
+		<?php if ( empty( $dns_records ) ) : ?>
+			<p class="notice notice-warning">No proxiable DNS records found for this zone.</p>
+		<?php else : ?>
+			<table class="dns-records-table">
+				<thead>
+					<tr>
+						<th>Type</th>
+						<th>Name</th>
+						<th>Content</th>
+						<th>Proxy Status</th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php foreach ( $dns_records as $record ) : ?>
+						<tr data-zone-id="<?php echo htmlspecialchars( $zone_id, ENT_QUOTES, 'UTF-8' ); ?>" data-record-id="<?php echo htmlspecialchars( $record['id'], ENT_QUOTES, 'UTF-8' ); ?>">
+							<td class="record-type">
+								<span class="type-badge type-<?php echo htmlspecialchars( strtolower( $record['type'] ), ENT_QUOTES, 'UTF-8' ); ?>">
+									<?php echo htmlspecialchars( $record['type'], ENT_QUOTES, 'UTF-8' ); ?>
+								</span>
+							</td>
+							<td class="record-name"><?php echo htmlspecialchars( $record['name'], ENT_QUOTES, 'UTF-8' ); ?></td>
+							<td class="record-content"><?php echo htmlspecialchars( $record['content'], ENT_QUOTES, 'UTF-8' ); ?></td>
+							<td class="proxy-cell">
+								<button class="proxy-toggle-btn <?php echo $record['proxied'] ? 'proxied' : 'not-proxied'; ?>"
+									data-record-id="<?php echo htmlspecialchars( $record['id'], ENT_QUOTES, 'UTF-8' ); ?>"
+									data-zone-id="<?php echo htmlspecialchars( $zone_id, ENT_QUOTES, 'UTF-8' ); ?>"
+									data-proxied="<?php echo $record['proxied'] ? 'true' : 'false'; ?>"
+									data-record-type="<?php echo htmlspecialchars( $record['type'], ENT_QUOTES, 'UTF-8' ); ?>"
+									data-record-name="<?php echo htmlspecialchars( $record['name'], ENT_QUOTES, 'UTF-8' ); ?>"
+									data-record-content="<?php echo htmlspecialchars( $record['content'], ENT_QUOTES, 'UTF-8' ); ?>">
+									<span class="toggle-status"><?php echo $record['proxied'] ? 'ON' : 'OFF'; ?></span>
+								</button>
+							</td>
+						</tr>
+					<?php endforeach; ?>
+				</tbody>
+			</table>
+		<?php endif; ?>
 		</div>
 
-	<?php if ( empty( $dns_records ) ) : ?>
-		<p class="notice notice-warning">No proxiable DNS records found for this zone.</p>
-	<?php else : ?>
-		<table class="dns-records-table">
-			<thead>
-				<tr>
-					<th>Type</th>
-					<th>Name</th>
-					<th>Content</th>
-					<th>Proxy Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				<?php foreach ( $dns_records as $record ) : ?>
-					<tr data-zone-id="<?php echo htmlspecialchars( $zone_id ); ?>" data-record-id="<?php echo htmlspecialchars( $record['id'] ); ?>">
-						<td class="record-type">
-							<span class="type-badge type-<?php echo strtolower( $record['type'] ); ?>">
-								<?php echo htmlspecialchars( $record['type'] ); ?>
-							</span>
-						</td>
-						<td class="record-name"><?php echo htmlspecialchars( $record['name'] ); ?></td>
-						<td class="record-content"><?php echo htmlspecialchars( $record['content'] ); ?></td>
-						<td class="proxy-cell">
-							<button class="proxy-toggle-btn <?php echo $record['proxied'] ? 'proxied' : 'not-proxied'; ?>"
-								data-record-id="<?php echo htmlspecialchars( $record['id'] ); ?>"
-								data-zone-id="<?php echo htmlspecialchars( $zone_id ); ?>"
-								data-proxied="<?php echo $record['proxied'] ? 'true' : 'false'; ?>"
-								data-record-type="<?php echo htmlspecialchars( $record['type'] ); ?>"
-								data-record-name="<?php echo htmlspecialchars( $record['name'] ); ?>"
-								data-record-content="<?php echo htmlspecialchars( $record['content'] ); ?>">
-								<span class="toggle-status"><?php echo $record['proxied'] ? 'ON' : 'OFF'; ?></span>
-							</button>
-						</td>
-					</tr>
-				<?php endforeach; ?>
-			</tbody>
-		</table>
-	<?php endif; ?>
-	</div>
-
-<?php endforeach; ?>
+	<?php endforeach; ?>
+<?php endif; ?>
 
 <div class="help">
 	<h2>DNS Proxy Status</h2>
@@ -124,10 +135,43 @@ foreach ( $zones as $zone ) :
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-	const toggleButtons = document.querySelectorAll('.proxy-toggle-btn');
 	const messageBox = document.getElementById('ajax-message');
 	const messageText = document.getElementById('ajax-message-text');
 
+	// Refresh button
+	const refreshBtn = document.getElementById('refresh-proxy-btn');
+	if (refreshBtn) {
+		refreshBtn.addEventListener('click', function() {
+			this.disabled = true;
+			this.textContent = '↻ Loading…';
+			const formData = new FormData();
+			formData.append('setting', 'refresh_proxy_status');
+			fetch('ajax-handler.php', {
+				method: 'POST',
+				body: formData,
+				headers: { 'X-Requested-With': 'XMLHttpRequest' }
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					location.reload();
+				} else {
+					messageBox.className = 'notice notice-error';
+					messageText.textContent = data.message || 'Refresh failed.';
+					this.disabled = false;
+					this.innerHTML = '<span class="btn-icon">↻</span> Refresh Data';
+				}
+			})
+			.catch(() => {
+				messageBox.className = 'notice notice-error';
+				messageText.textContent = 'Network error during refresh.';
+				this.disabled = false;
+				this.innerHTML = '<span class="btn-icon">↻</span> Refresh Data';
+			});
+		});
+	}
+
+	const toggleButtons = document.querySelectorAll('.proxy-toggle-btn');
 	toggleButtons.forEach(button => {
 		button.addEventListener('click', function() {
 			const recordId = this.dataset.recordId;

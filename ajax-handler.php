@@ -10,6 +10,7 @@ if ( ! isset( $_SERVER['HTTP_X_REQUESTED_WITH'] ) || strtolower( $_SERVER['HTTP_
 
 require_once 'config.php';
 require_once 'functions.php';
+require_once 'cache.php';
 
 // Security check - make sure we have all needed Cloudflare credentials
 if (
@@ -42,6 +43,146 @@ if ( empty( $_POST['setting'] ) ) {
 }
 
 $setting = $_POST['setting'];
+
+// --- Cache refresh actions ---
+
+// Regenerate nginx conf files from rules.php (no API call needed).
+if ( 'refresh_nginx_rules' === $setting ) {
+	require_once 'generate-nginx-rules.php';
+	$file_standard = __DIR__ . '/nginx/bot-blocking.conf';
+	if ( file_exists( $file_standard ) ) {
+		echo json_encode(
+			array(
+				'success'      => true,
+				'generated_at' => date( 'Y-m-d H:i:s', filemtime( $file_standard ) ),
+				'message'      => 'Nginx conf files regenerated.',
+			)
+		);
+	} else {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Regeneration failed — output file not found.',
+			)
+		);
+	}
+	exit;
+}
+
+// Refresh zones list (used by WAF Rules, Security Status, Proxy Status pages).
+if ( 'refresh_zones' === $setting ) {
+	$zones = pw_get_cloudflare_zones(
+		CLOUDFLARE_ACCOUNT_IDS,
+		CLOUDFLARE_API_KEY,
+		CLOUDFLARE_EMAIL
+	);
+	if ( is_array( $zones ) ) {
+		pw_cache_set( 'zones', $zones );
+		echo json_encode(
+			array(
+				'success' => true,
+				'count'   => count( $zones ),
+				'message' => 'Zones refreshed (' . count( $zones ) . ' domains loaded).',
+			)
+		);
+	} else {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Failed to fetch zones from Cloudflare API.',
+			)
+		);
+	}
+	exit;
+}
+
+// Refresh security status for all zones.
+if ( 'refresh_security_status' === $setting ) {
+	$zones = pw_cache_get( 'zones' );
+	if ( ! $zones ) {
+		$zones = pw_get_cloudflare_zones(
+			CLOUDFLARE_ACCOUNT_IDS,
+			CLOUDFLARE_API_KEY,
+			CLOUDFLARE_EMAIL
+		);
+		if ( is_array( $zones ) ) {
+			pw_cache_set( 'zones', $zones );
+		}
+	}
+
+	if ( ! is_array( $zones ) || empty( $zones ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'No zones available to refresh.',
+			)
+		);
+		exit;
+	}
+
+	$security_data = array();
+	foreach ( $zones as $zone ) {
+		$security_data[ $zone['id'] ] = pw_get_zone_security_settings(
+			$zone['id'],
+			CLOUDFLARE_API_KEY,
+			CLOUDFLARE_EMAIL
+		);
+	}
+	pw_cache_set( 'security_status', $security_data );
+	echo json_encode(
+		array(
+			'success' => true,
+			'count'   => count( $security_data ),
+			'message' => 'Security status refreshed for ' . count( $security_data ) . ' zones.',
+		)
+	);
+	exit;
+}
+
+// Refresh DNS proxy records for all zones.
+if ( 'refresh_proxy_status' === $setting ) {
+	$zones = pw_cache_get( 'zones' );
+	if ( ! $zones ) {
+		$zones = pw_get_cloudflare_zones(
+			CLOUDFLARE_ACCOUNT_IDS,
+			CLOUDFLARE_API_KEY,
+			CLOUDFLARE_EMAIL
+		);
+		if ( is_array( $zones ) ) {
+			pw_cache_set( 'zones', $zones );
+		}
+	}
+
+	if ( ! is_array( $zones ) || empty( $zones ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'No zones available to refresh.',
+			)
+		);
+		exit;
+	}
+
+	$proxy_data = array();
+	foreach ( $zones as $zone ) {
+		$proxy_data[ $zone['id'] ] = pw_get_zone_dns_records(
+			$zone['id'],
+			CLOUDFLARE_API_KEY,
+			CLOUDFLARE_EMAIL
+		);
+	}
+	pw_cache_set( 'proxy_status', $proxy_data );
+	echo json_encode(
+		array(
+			'success' => true,
+			'count'   => count( $proxy_data ),
+			'message' => 'DNS proxy records refreshed for ' . count( $proxy_data ) . ' zones.',
+		)
+	);
+	exit;
+}
+
+// --- End cache refresh actions ---
 
 // Handle backup creation
 if ( $setting === 'create_backup' ) {

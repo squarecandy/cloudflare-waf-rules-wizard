@@ -1,5 +1,12 @@
 <?php
 
+// Polyfill for WordPress escaping functions (standalone PHP — not a WP install).
+if ( ! function_exists( 'esc_html' ) ) {
+	function esc_html( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
 // Unified function to make curl requests
 function pw_make_curl_request( $url, $method, $headers, $data = null ) {
 	$ch = curl_init();

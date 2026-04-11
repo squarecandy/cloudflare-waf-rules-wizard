@@ -5,14 +5,34 @@
 
 // Direct access protection
 defined( 'CLOUDFLARE_API_KEY' ) || exit( 'No direct script access allowed' );
+
+$cached_zones    = pw_cache_get( 'zones' );
+$cached_security = pw_cache_get( 'security_status' );
+$cache_age       = pw_cache_age_label( 'security_status' );
 ?>
 
 <h2>Cloudflare Security Features Status</h2>
+
+<div class="cache-controls">
+	<?php if ( $cache_age ) : ?>
+		<span class="cache-age">Last refreshed: <?php echo esc_html( $cache_age ); ?></span>
+	<?php else : ?>
+		<span class="cache-age cache-age-empty">No data cached yet.</span>
+	<?php endif; ?>
+	<button id="refresh-security-btn" class="button-secondary btn-refresh">
+		<span class="btn-icon">↻</span> Refresh Data
+	</button>
+</div>
 
 <div id="ajax-message" class="notice hidden">
 	<p id="ajax-message-text"></p>
 </div>
 
+<?php if ( ! $cached_zones || ! $cached_security ) : ?>
+	<div class="notice notice-info">
+		<p>No cached data available. Click <strong>Refresh Data</strong> to load security settings from the Cloudflare API.</p>
+	</div>
+<?php else : ?>
 <table class="security-table">
 	<thead>
 		<tr>
@@ -26,54 +46,52 @@ defined( 'CLOUDFLARE_API_KEY' ) || exit( 'No direct script access allowed' );
 		</tr>
 	</thead>
 	<tbody>
-		<?php
-		$zones = pw_get_cloudflare_zones(
-			CLOUDFLARE_ACCOUNT_IDS,
-			CLOUDFLARE_API_KEY,
-			CLOUDFLARE_EMAIL
-		);
-		foreach ( $zones as $zone ) :
+		<?php foreach ( $cached_zones as $zone ) : ?>
+			<?php
 			$zone_id  = $zone['id'];
-			$settings = pw_get_zone_security_settings(
-				$zone_id,
-				CLOUDFLARE_API_KEY,
-				CLOUDFLARE_EMAIL
+			$settings = isset( $cached_security[ $zone_id ] ) ? $cached_security[ $zone_id ] : array(
+				'bot_fight_mode'       => 'Unknown',
+				'block_ai_bots'        => 'Unknown',
+				'ai_labyrinth'         => 'Unknown',
+				'robots_management'    => 'Unknown',
+				'javascript_detection' => 'Unknown',
 			);
 			?>
-		<tr data-zone-id="<?php echo $zone_id; ?>">
-			<td class="zone_domain"><?php echo $zone['name']; ?></td>
-			<td class="zone_id">
-				<code><?php echo $zone_id; ?></code>
-			</td>
-			<td class="setting-cell <?php echo strtolower( $settings['bot_fight_mode'] ); ?>"
-				data-setting="bot_fight_mode"
-				data-value="<?php echo $settings['bot_fight_mode'] === 'On' ? 'true' : 'false'; ?>">
-				<?php echo $settings['bot_fight_mode']; ?>
-			</td>
-			<td class="setting-cell <?php echo strtolower( $settings['block_ai_bots'] ); ?>"
-				data-setting="block_ai_bots"
-				data-value="<?php echo $settings['block_ai_bots'] === 'On' ? 'true' : 'false'; ?>">
-				<?php echo $settings['block_ai_bots']; ?>
-			</td>
-			<td class="setting-cell <?php echo strtolower( $settings['ai_labyrinth'] ); ?>"
-				data-setting="ai_labyrinth"
-				data-value="<?php echo $settings['ai_labyrinth'] === 'On' ? 'true' : 'false'; ?>">
-				<?php echo $settings['ai_labyrinth']; ?>
-			</td>
-			<td class="setting-cell <?php echo strtolower( $settings['javascript_detection'] ); ?>"
-				data-setting="javascript_detection"
-				data-value="<?php echo $settings['javascript_detection'] === 'On' ? 'true' : 'false'; ?>">
-				<?php echo $settings['javascript_detection']; ?>
-			</td>
-			<td class="setting-cell <?php echo strtolower( $settings['robots_management'] ); ?>"
-				data-setting="robots_management"
-				data-value="<?php echo $settings['robots_management'] === 'On' ? 'true' : 'false'; ?>">
-				<?php echo $settings['robots_management']; ?>
-			</td>
-		</tr>
+			<tr data-zone-id="<?php echo htmlspecialchars( $zone_id, ENT_QUOTES, 'UTF-8' ); ?>">
+				<td class="zone_domain"><?php echo htmlspecialchars( $zone['name'], ENT_QUOTES, 'UTF-8' ); ?></td>
+				<td class="zone_id">
+					<code><?php echo htmlspecialchars( $zone_id, ENT_QUOTES, 'UTF-8' ); ?></code>
+				</td>
+				<td class="setting-cell <?php echo htmlspecialchars( strtolower( $settings['bot_fight_mode'] ), ENT_QUOTES, 'UTF-8' ); ?>"
+					data-setting="bot_fight_mode"
+					data-value="<?php echo 'On' === $settings['bot_fight_mode'] ? 'true' : 'false'; ?>">
+					<?php echo htmlspecialchars( $settings['bot_fight_mode'], ENT_QUOTES, 'UTF-8' ); ?>
+				</td>
+				<td class="setting-cell <?php echo htmlspecialchars( strtolower( $settings['block_ai_bots'] ), ENT_QUOTES, 'UTF-8' ); ?>"
+					data-setting="block_ai_bots"
+					data-value="<?php echo 'On' === $settings['block_ai_bots'] ? 'true' : 'false'; ?>">
+					<?php echo htmlspecialchars( $settings['block_ai_bots'], ENT_QUOTES, 'UTF-8' ); ?>
+				</td>
+				<td class="setting-cell <?php echo htmlspecialchars( strtolower( $settings['ai_labyrinth'] ), ENT_QUOTES, 'UTF-8' ); ?>"
+					data-setting="ai_labyrinth"
+					data-value="<?php echo 'On' === $settings['ai_labyrinth'] ? 'true' : 'false'; ?>">
+					<?php echo htmlspecialchars( $settings['ai_labyrinth'], ENT_QUOTES, 'UTF-8' ); ?>
+				</td>
+				<td class="setting-cell <?php echo htmlspecialchars( strtolower( $settings['javascript_detection'] ), ENT_QUOTES, 'UTF-8' ); ?>"
+					data-setting="javascript_detection"
+					data-value="<?php echo 'On' === $settings['javascript_detection'] ? 'true' : 'false'; ?>">
+					<?php echo htmlspecialchars( $settings['javascript_detection'], ENT_QUOTES, 'UTF-8' ); ?>
+				</td>
+				<td class="setting-cell <?php echo htmlspecialchars( strtolower( $settings['robots_management'] ), ENT_QUOTES, 'UTF-8' ); ?>"
+					data-setting="robots_management"
+					data-value="<?php echo 'On' === $settings['robots_management'] ? 'true' : 'false'; ?>">
+					<?php echo htmlspecialchars( $settings['robots_management'], ENT_QUOTES, 'UTF-8' ); ?>
+				</td>
+			</tr>
 		<?php endforeach; ?>
 	</tbody>
 </table>
+<?php endif; ?>
 
 <div class="help">
 	<h2>Bot fight mode</h2>
@@ -97,9 +115,43 @@ defined( 'CLOUDFLARE_API_KEY' ) || exit( 'No direct script access allowed' );
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-	const cells = document.querySelectorAll('.setting-cell');
 	const messageBox = document.getElementById('ajax-message');
 	const messageText = document.getElementById('ajax-message-text');
+
+	// Refresh button
+	const refreshBtn = document.getElementById('refresh-security-btn');
+	if (refreshBtn) {
+		refreshBtn.addEventListener('click', function() {
+			this.disabled = true;
+			this.textContent = '↻ Loading…';
+			const formData = new FormData();
+			formData.append('setting', 'refresh_security_status');
+			fetch('ajax-handler.php', {
+				method: 'POST',
+				body: formData,
+				headers: { 'X-Requested-With': 'XMLHttpRequest' }
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					location.reload();
+				} else {
+					messageBox.className = 'notice notice-error';
+					messageText.textContent = data.message || 'Refresh failed.';
+					this.disabled = false;
+					this.innerHTML = '<span class="btn-icon">↻</span> Refresh Data';
+				}
+			})
+			.catch(() => {
+				messageBox.className = 'notice notice-error';
+				messageText.textContent = 'Network error during refresh.';
+				this.disabled = false;
+				this.innerHTML = '<span class="btn-icon">↻</span> Refresh Data';
+			});
+		});
+	}
+
+	const cells = document.querySelectorAll('.setting-cell');
 	// Add click event to all setting cells
 	cells.forEach(cell => {
 		cell.addEventListener('click', function() {
