@@ -395,7 +395,6 @@ $wp_path_strings = array(
 	'/.htaccess',       // Apache config probe
 	'.bak',             // backup file probes
 	'.sql',             // database dump exposure
-	'install.php',      // Block install.php. Minor security concern for edge cases where other WP things break.
 );
 
 $wp_paths = array_map(
@@ -412,6 +411,9 @@ $wp_paths = implode( ' or ', $wp_paths );
 // '?=author' = WordPress user enumeration probe via query string
 // check for absence of "wordpress_logged_in_" cookie to avoid blocking legitimate access (logged in site admins)
 $wp_paths .= ' or (http.request.uri.path contains "wp/v2/users" and not http.cookie contains "wordpress_logged_in_") or (http.request.full_uri contains "?=author" and not http.cookie contains "wordpress_logged_in_")';
+
+// Exact match only — avoid blocking /wp-admin/plugin-install.php and similar legitimate paths.
+$wp_paths .= ' or (http.request.uri.path eq "/install.php")';
 
 // Block AI training crawlers by Cloudflare bot category.
 // "AI Assistant" is intentionally excluded — it covers chatgpt-user and claude-web (live retrieval bots
