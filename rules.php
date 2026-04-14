@@ -413,7 +413,7 @@ $wp_paths = implode( ' or ', $wp_paths );
 $wp_paths .= ' or (http.request.uri.path contains "wp/v2/users" and not http.cookie contains "wordpress_logged_in_") or (http.request.full_uri contains "?=author" and not http.cookie contains "wordpress_logged_in_")';
 
 // Exact match only — avoid blocking /wp-admin/plugin-install.php and similar legitimate paths.
-$wp_paths .= ' or (http.request.uri.path eq "/install.php")';
+$wp_paths .= ' or (http.request.uri.path eq "/wp-admin/install.php")';
 
 // Block AI training crawlers by Cloudflare bot category.
 // "AI Assistant" is intentionally excluded — it covers chatgpt-user and claude-web (live retrieval bots
