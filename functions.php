@@ -98,10 +98,17 @@ function pw_get_cloudflare_zones( $account_ids, $api_key, $api_email ) {
 	return $all_zones;
 }
 
-// Returns true if a rule description ends with [CUSTOM] (case-insensitive).
+// Returns true if a rule description ends with [CUSTOM_FIRST], [CUSTOM_LAST], or legacy [CUSTOM].
 function pw_is_custom_rule( $rule ) {
 	$desc = isset( $rule['description'] ) ? trim( $rule['description'] ) : '';
-	return (bool) preg_match( '/\[custom\]$/i', $desc );
+	return (bool) preg_match( '/\[custom(?:_first|_last)?\]$/i', $desc );
+}
+
+// Returns 'first' or 'last' based on the [CUSTOM_FIRST]/[CUSTOM_LAST] tag in a rule's description.
+// Legacy [CUSTOM] and [CUSTOM_FIRST] both return 'first'.
+function pw_get_custom_rule_position( $rule ) {
+	$desc = isset( $rule['description'] ) ? trim( $rule['description'] ) : '';
+	return preg_match( '/\[custom_last\]$/i', $desc ) ? 'last' : 'first';
 }
 
 // Strips Cloudflare read-only fields from a rule so it can be re-submitted in a PUT payload.
@@ -148,6 +155,7 @@ function pw_replace_ruleset( $zone_id, $ruleset_id, $headers, $rules ) {
 }
 
 // Apply a ruleset to a single zone. Returns ['success' => bool, 'message' => string].
+// [CUSTOM_FIRST] rules are placed before managed rules; [CUSTOM_LAST] rules after. Legacy [CUSTOM] = first.
 function pw_apply_ruleset_to_zone( $zone_id, $rules, $api_key, $email ) {
 	$headers    = array(
 		"X-Auth-Email: $email",
@@ -164,16 +172,22 @@ function pw_apply_ruleset_to_zone( $zone_id, $rules, $api_key, $email ) {
 			);
 		}
 	}
-	$existing_rules  = pw_get_existing_waf_rules( $zone_id, $api_key, $email );
-	$preserved_rules = array();
+	$existing_rules = pw_get_existing_waf_rules( $zone_id, $api_key, $email );
+	$first_rules    = array();
+	$last_rules     = array();
 	foreach ( $existing_rules as $rule ) {
 		if ( pw_is_custom_rule( $rule ) ) {
-			$preserved_rules[] = pw_strip_readonly_rule_fields( $rule );
+			$clean = pw_strip_readonly_rule_fields( $rule );
+			if ( 'last' === pw_get_custom_rule_position( $rule ) ) {
+				$last_rules[] = $clean;
+			} else {
+				$first_rules[] = $clean;
+			}
 		}
 	}
 	// Strip local-only fields (e.g. 'notes') from new rules before sending to CF API.
 	$clean_rules  = array_map( 'pw_strip_readonly_rule_fields', $rules );
-	$merged_rules = array_values( array_merge( $preserved_rules, $clean_rules ) );
+	$merged_rules = array_values( array_merge( $first_rules, $clean_rules, $last_rules ) );
 	$response     = pw_replace_ruleset( $zone_id, $ruleset_id, $headers, $merged_rules );
 	if ( isset( $response['success'] ) && $response['success'] ) {
 		return array(
