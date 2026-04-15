@@ -29,6 +29,8 @@ $ewww = '(http.user_agent contains "ExactDN") or (http.user_agent contains "ewww
 $observatory = '(http.user_agent contains "CloudflareObservatory")';
 // Allow Square Candy Visual Regression Tools
 $visual_regression = '(http.user_agent eq "squarecandy-visual-regression-testing")';
+// Allow Realfavicon
+$realfavicon = '(http.user_agent contains "RealFaviconGenerator")';
 // Allow Patchstack
 $patchstack = '(http.cookie contains "skip_splash" and http.request.uri contains "_wcb")';
 // Allow Github Actions/Hooks
@@ -81,6 +83,7 @@ $allow_free            = array(
 	$ewww,
 	$observatory,
 	$visual_regression,
+	$realfavicon,
 	$patchstack,
 	$github,
 	$asana,
