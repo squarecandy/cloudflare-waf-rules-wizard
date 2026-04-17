@@ -1,14 +1,26 @@
 <?php
 ///// Rules snippets with explainations /////
 
+// Staging subdomain prefixes — used by $staging_challenge and to exclude staging from search engine allow rules.
+$staging_prefixes = array( 'staging.', 'stg.', 'dev.' );
+$not_staging      = 'not (' . implode(
+	' or ',
+	array_map(
+		function ( $p ) {
+			return 'starts_with(http.host, "' . $p . '")';
+		},
+		$staging_prefixes
+	)
+) . ')';
+
 // Allow Rules //
 
 // Google
-$googlebot = '(cf.verified_bot_category in {"Search Engine Crawler" "Advertising & Marketing" "Page Preview" "Academic Research" "Security" "Accessibility" "Webhooks" "Feed Fetcher" "Aggregator" "Monitoring & Analytics"} and http.user_agent contains "Google")';
+$googlebot = '(cf.verified_bot_category in {"Search Engine Crawler" "Advertising & Marketing" "Page Preview" "Academic Research" "Security" "Accessibility" "Webhooks" "Feed Fetcher" "Aggregator" "Monitoring & Analytics"} and http.user_agent contains "Google" and ' . $not_staging . ')';
 //Bing
-$bingbot = '(cf.verified_bot_category in {"Search Engine Crawler" "Monitoring & Analytics" "Advertising & Marketing" "Page Preview" "Academic Research" "Security" "Accessibility" "Webhooks" "Feed Fetcher" "Aggregator"} and http.user_agent contains "Bing")';
+$bingbot = '(cf.verified_bot_category in {"Search Engine Crawler" "Monitoring & Analytics" "Advertising & Marketing" "Page Preview" "Academic Research" "Security" "Accessibility" "Webhooks" "Feed Fetcher" "Aggregator"} and http.user_agent contains "Bing" and ' . $not_staging . ')';
 // Allow DuckDuck
-$duckduckgo = '(cf.verified_bot_category eq "Search Engine Crawler" and http.user_agent contains "DuckDuckBot")';
+$duckduckgo = '(cf.verified_bot_category eq "Search Engine Crawler" and http.user_agent contains "DuckDuckBot" and ' . $not_staging . ')';
 // Allow verified page preview bots
 $page_preview = '(cf.verified_bot_category eq "Page Preview")';
 // Allow Wayback Machine
@@ -57,8 +69,7 @@ $squarecandy_server_ips = array(
 	'45.77.107.160', // Square Candy Site Stage
 	'45.76.9.149', // Orion Magazine Server
 	'67.246.27.0', // Pete Home 2026
-	'2001:4860:7:110e::a9', // Pete Home 2026
-	'2600:4040:a73d:e500:450f:66f:1b83:693c', // Eileen Home 2026
+	'2600:4040:a73d:e500::/64', // Eileen Home 2026 (/64 subnet)
 	'71.187.116.46', // Eileen Home 2026
 	'15.207.251.177', // Host Curator Nagios IP (monitoring server)
 );
@@ -483,6 +494,33 @@ $login_protection = '(' . implode(
 	)
 ) . ')';
 
+// Managed challenge for staging/stg subdomains.
+// - Non-GET/HEAD requests (POST, PUT, DELETE, etc.) are always challenged.
+// - GET/HEAD requests are challenged unless they are fetching a static asset.
+// - Search engine crawlers (Google, Bing, DuckDuckGo) are NOT exempt — staging should not be indexed.
+$staging_host_checks      = implode(
+	' or ',
+	array_map(
+		function ( $prefix ) {
+			return 'starts_with(http.host, "' . $prefix . '")';
+		},
+		$staging_prefixes
+	)
+);
+$staging_is_host          = '(' . $staging_host_checks . ')';
+$staging_asset_extensions = array( 'css', 'js', 'jpeg', 'jpg', 'png', 'webp', 'svg', 'gif', 'ico', 'map', 'mp3', 'mp4', 'pdf', 'ttf', 'woff', 'woff2' );
+$staging_asset_exclusions = implode(
+	' or ',
+	array_map(
+		function ( $ext ) {
+			return 'ends_with(lower(http.request.uri.path), ".' . $ext . '")';
+		},
+		$staging_asset_extensions
+	)
+);
+$staging_is_asset         = '(' . $staging_asset_exclusions . ')';
+$staging_challenge        = $staging_is_host . ' and (not http.request.method in {"GET" "HEAD"} or not ' . $staging_is_asset . ')';
+
 ///// End Rules snippets /////
 
 $squarecandy_rules_free = array(
@@ -512,7 +550,7 @@ $squarecandy_rules_free = array(
 	'managed_challenge_hosts' => array(
 		'description' => 'Managed Challenge Web Hosts, Cloud Providers, TOR',
 		'notes'       => 'Issues a managed challenge to traffic from cloud/hosting ASNs (AWS, GCP, Azure, DigitalOcean, OVH, Hetzner, etc.), TOR exit nodes, requests with a spoofed Chrome UA (missing sec-ch-ua header), and login page requests.',
-		'expression'  => $challenge_asns . ' or ' . $tor . ' or ' . $fake_chrome . ' or ' . $login_protection,
+		'expression'  => $challenge_asns . ' or ' . $tor . ' or ' . $fake_chrome . ' or ' . $login_protection . ' or ' . $staging_challenge,
 		'action'      => 'managed_challenge',
 	),
 );
