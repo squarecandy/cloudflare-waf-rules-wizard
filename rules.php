@@ -69,8 +69,9 @@ $squarecandy_server_ips = array(
 	'45.77.107.160', // Square Candy Site Stage
 	'45.76.9.149', // Orion Magazine Server
 	'67.246.27.0', // Pete Home 2026
-	'2600:4040:a73d:e500::/64', // Eileen Home 2026 (/64 subnet)
-	'71.187.116.46', // Eileen Home 2026
+	'2600:4040:a700::/40', // Eileen Home 2026 (subnet)
+	'71.184.0.0/13', // Eileen Home 2026 1
+	'173.64.0.0/12', // Eileen Home 2026 2
 	'15.207.251.177', // Host Curator Nagios IP (monitoring server)
 );
 
