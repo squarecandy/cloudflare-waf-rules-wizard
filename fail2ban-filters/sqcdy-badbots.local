@@ -1,6 +1,6 @@
 # ============================================================================
 # sqcdy-badbots.local — AUTO-GENERATED, DO NOT EDIT BY HAND
-# Generated: 2026-03-30 18:55:18
+# Generated: 2026-05-12 14:00:24
 # Source:    rules.php  (edit that file, then re-run generate-fail2ban-filters.php)
 #
 # Overrides badbotscustom in sqcdy-badbots.conf (failregex lives in the .conf).

@@ -105,6 +105,22 @@ sudo tail -50 /var/log/cloudflare-fail2ban-sync.log
 
 ## Usage
 
+### Fast Update From Project Root
+
+For routine updates (config + script + filters + jails + reload + sync), run one command:
+
+```bash
+./fail2ban-scripts/update-fail2ban.sh <server-slug>
+```
+
+This command overwrites a server-specific config file in the project at:
+
+```bash
+fail2ban-scripts/generated/cloudflare-fail2ban-config-<server-slug>.txt
+```
+
+Then it deploys all fail2ban integration files to that server.
+
 ### Manual Sync
 
 ```bash

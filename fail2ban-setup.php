@@ -187,13 +187,14 @@ code.path { font-size: 0.85em; background: #f0f0f0; padding: 1px 5px; border-rad
 
 	<?php foreach ( $fb_servers as $server_slug => $server ) : ?>
 		<?php
-		$safe_name      = htmlspecialchars( $server['name'], ENT_QUOTES, 'UTF-8' );
-		$safe_hostname  = htmlspecialchars( $server['hostname'], ENT_QUOTES, 'UTF-8' );
-		$safe_name_attr = $safe_name;
-		$ssh_user       = isset( $server['ssh_user'] ) ? $server['ssh_user'] : 'root';
-		$safe_ssh_user  = htmlspecialchars( $ssh_user, ENT_QUOTES, 'UTF-8' );
-		$safe_slug_attr = htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' );
-		$safe_msg_slug  = htmlspecialchars( preg_replace( '/\W/', '-', $server['name'] ), ENT_QUOTES, 'UTF-8' );
+		$safe_name         = htmlspecialchars( $server['name'], ENT_QUOTES, 'UTF-8' );
+		$safe_hostname     = htmlspecialchars( $server['hostname'], ENT_QUOTES, 'UTF-8' );
+		$safe_name_attr    = $safe_name;
+		$ssh_user          = isset( $server['ssh_user'] ) ? $server['ssh_user'] : 'root';
+		$safe_ssh_user     = htmlspecialchars( $ssh_user, ENT_QUOTES, 'UTF-8' );
+		$safe_slug_attr    = htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' );
+		$safe_msg_slug     = htmlspecialchars( preg_replace( '/\W/', '-', $server['name'] ), ENT_QUOTES, 'UTF-8' );
+		$server_config_rel = 'fail2ban-scripts/generated/cloudflare-fail2ban-config-' . htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ) . '.txt';
 
 		// Collect accounts that belong to this server (no 'servers' key = all servers).
 		$server_account_idxs = array();
@@ -236,97 +237,87 @@ code.path { font-size: 0.85em; background: #f0f0f0; padding: 1px 5px; border-rad
 </div>
 
 <div class="fb-checklist-step">
-	<strong>3a &mdash; From your Mac: deploy files to the server</strong>
-	<p>Download the config file, then run these commands from the <strong>project root</strong> on your Mac:</p>
+	<strong>3a &mdash; From your Mac: preview and run the helper script</strong>
+	<p><strong>Run these commands on your Mac</strong> from the <strong>project root</strong>. Generate/overwrite the config file first, then preview the deployment with <code>--dry-run</code>, then run it for real.</p>
 	<p>
-		<button class="fb-btn fb-download-config-btn" data-server-name="<?php echo $safe_name_attr; ?>">
-			&#8659; Download cloudflare-fail2ban-config.txt
+		<button class="fb-btn fb-download-config-btn" data-server-name="<?php echo $safe_name_attr; ?>" data-msg-target="fb-dl-msg-<?php echo $safe_msg_slug; ?>">
+			&#8659; Generate config file
 		</button>
 		<span class="fb-msg" id="fb-dl-msg-<?php echo $safe_msg_slug; ?>"></span>
 	</p>
-	<pre class="fb-code"># Create directories on the server (first time only)
-ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mkdir -p /usr/local/bin/cloudflare-fail2ban /root/.cloudflare && sudo chmod 700 /root/.cloudflare"
+	<pre class="fb-code"># Run on your Mac: preview the initial deployment
+./fail2ban-scripts/update-fail2ban.sh --dry-run <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
 
-# Deploy config, script, and token files
-scp ~/Downloads/cloudflare-fail2ban-config.txt <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-config
-scp fail2ban-scripts/cloudflare-fail2ban-sync <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/usr/local/bin/cloudflare-fail2ban/
-<?php echo $scp_token_commands; // phpcs:ignore Generic.WhiteSpace.ScopeIndent ?>
-# Deploy fail2ban filters and custom jails (scp to /tmp first, then sudo mv)
-scp fail2ban-filters/sqcdy-*.conf fail2ban-filters/sqcdy-*.local <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/tmp/
-ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mv /tmp/sqcdy-*.conf /tmp/sqcdy-*.local /etc/fail2ban/filter.d/"
-scp fail2ban-jails/sqcdy-jails.conf <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/tmp/
-ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mv /tmp/sqcdy-jails.conf /etc/fail2ban/jail.d/"</pre>
+# Run on your Mac: execute the initial deployment
+./fail2ban-scripts/update-fail2ban.sh <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?></pre>
 </div>
 
 <div class="fb-checklist-step">
-	<strong>3b &mdash; SSH into the server as root</strong>
-<pre class="fb-code">ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname . "\n"; ?>sudo -i</pre>
-</div>
-
-<div class="fb-checklist-step">
-	<strong>3c &mdash; Set up permissions and symlink</strong>
-<pre class="fb-code">chmod 600 /root/.cloudflare/cloudflare-api-key-*
-chmod +x /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-sync
-ln -sf /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-sync /usr/local/bin/cloudflare-fail2ban-sync</pre>
-</div>
-
-<div class="fb-checklist-step">
-	<strong>3d &mdash; Deploy fail2ban jails and reload</strong>
-	<p>The custom jails live in <code>jail.d/sqcdy-jails.conf</code> &mdash; this does <strong>not</strong> modify Plesk&rsquo;s <code>jail.local</code>. The sync cron reads directly from <code>fail2ban-client status</code> every 5 minutes &mdash; no changes to <code>jail.local</code> are needed.</p>
-<pre class="fb-code">systemctl status fail2ban
-fail2ban-client reload
-fail2ban-client status</pre>
-</div>
-
-<div class="fb-checklist-step">
-	<strong>3e &mdash; Add the sync cron job</strong>
+	<strong>3b &mdash; On the server: add the sync cron job</strong>
+	<p><strong>Run these commands on the server</strong> after the initial deployment finishes.</p>
 <pre class="fb-code">crontab -e</pre>
-	<p>Add these lines:</p>
+	<p>Add this line:</p>
 <pre class="fb-code"># sync the current fail2ban list to all CloudFlare Accounts
 # see https://github.com/squarecandy/cloudflare-waf-rules-wizard/fail2ban-scripts
 */5 * * * * /usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-sync >> /var/log/cloudflare-fail2ban-sync.log 2>&1</pre>
 </div>
 
 <div class="fb-checklist-step">
-	<strong>3f &mdash; Test the sync</strong>
+	<strong>3c &mdash; From your Mac: connect to the server</strong>
+	<p><strong>Run this command on your Mac</strong> to open a root shell on the server for the verification steps below.</p>
+<pre class="fb-code">ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname . "\n"; ?>sudo -i</pre>
+</div>
+
+<div class="fb-checklist-step">
+	<strong>3d &mdash; On the server: verify fail2ban</strong>
+	<p>The helper script already deploys the config, tokens, filters, jails, permissions, symlink, reload, and initial sync. <strong>Run these commands on the server</strong> only to confirm the final state.</p>
+<pre class="fb-code">systemctl status fail2ban
+fail2ban-client reload
+fail2ban-client status</pre>
+</div>
+
+<div class="fb-checklist-step">
+	<strong>3e &mdash; On the server: check the sync log</strong>
+	<p><strong>Run these commands on the server</strong> to confirm the sync still works after cron is installed.</p>
 <pre class="fb-code">/usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-sync
 tail -50 /var/log/cloudflare-fail2ban-sync.log</pre>
 </div>
 
 <!-- STEP 4: UPDATES -->
 <h3>Step 4: Updates</h3>
-<p>When <code>config.php</code> changes (accounts or servers added/removed), re-run from your Mac:</p>
+<p><strong>Run these commands on your Mac</strong> from the <strong>project root</strong>. For routine updates, preview with <code>--dry-run</code> first, then run the matching command without it.</p>
 
 <div class="fb-checklist-step">
-	<strong>Config or accounts changed</strong>
+	<strong>Helper Script Update Commands</strong>
 	<p>
-		<button class="fb-btn outline fb-download-config-btn" data-server-name="<?php echo $safe_name_attr; ?>">
-			&#8659; Re-download cloudflare-fail2ban-config.txt
+		<button class="fb-btn outline fb-download-config-btn" data-server-name="<?php echo $safe_name_attr; ?>" data-msg-target="fb-dl-msg-<?php echo $safe_msg_slug; ?>-updates">
+			&#8659; Generate config file
 		</button>
+		<span class="fb-msg" id="fb-dl-msg-<?php echo $safe_msg_slug; ?>-updates"></span>
 	</p>
-	<pre class="fb-code">scp ~/Downloads/cloudflare-fail2ban-config.txt <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/usr/local/bin/cloudflare-fail2ban/cloudflare-fail2ban-config
-<?php echo $scp_token_commands; // phpcs:ignore Generic.WhiteSpace.ScopeIndent ?></pre>
-</div>
+	<pre class="fb-code"># Run on your Mac: preview the full update
+./fail2ban-scripts/update-fail2ban.sh --dry-run <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?></pre>
+	<pre class="fb-code"># Run on your Mac: full update (config, filters, keys, jails, reload, sync)
+./fail2ban-scripts/update-fail2ban.sh <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
 
-<div class="fb-checklist-step">
-	<strong>Scripts changed</strong>
-	<p>From the <strong>project root</strong> on your Mac:</p>
-	<pre class="fb-code"><?php echo $scp_script_commands; // phpcs:ignore Generic.WhiteSpace.ScopeIndent ?></pre>
-</div>
+# Run on your Mac: config-only update
+./fail2ban-scripts/update-fail2ban.sh --dry-run --config <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
+./fail2ban-scripts/update-fail2ban.sh --config <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
 
-<div class="fb-checklist-step">
-	<strong>Bot lists or WP paths changed (rules.php)</strong>
-	<p>Regenerate the fail2ban filters, deploy all filter files, then reload fail2ban:</p>
-	<pre class="fb-code">php generate-fail2ban-filters.php
-scp fail2ban-filters/sqcdy-*.conf fail2ban-filters/sqcdy-*.local <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/tmp/
-ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mv /tmp/sqcdy-*.conf /tmp/sqcdy-*.local /etc/fail2ban/filter.d/ && sudo fail2ban-client reload"</pre>
-</div>
+# Run on your Mac: API keys only
+./fail2ban-scripts/update-fail2ban.sh --dry-run --keys <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
+./fail2ban-scripts/update-fail2ban.sh --keys <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
 
-<div class="fb-checklist-step">
-	<strong>Jail settings changed (fail2ban-jails/sqcdy-jails.conf)</strong>
-	<p>Deploy the updated jails file and reload fail2ban:</p>
-	<pre class="fb-code">scp fail2ban-jails/sqcdy-jails.conf <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?>:/tmp/
-ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mv /tmp/sqcdy-jails.conf /etc/fail2ban/jail.d/ && sudo fail2ban-client reload"</pre>
+# Run on your Mac: filters and jails only
+./fail2ban-scripts/update-fail2ban.sh --dry-run --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
+./fail2ban-scripts/update-fail2ban.sh --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
+
+# Run on your Mac: combine components
+./fail2ban-scripts/update-fail2ban.sh --dry-run --config --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
+./fail2ban-scripts/update-fail2ban.sh --config --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
+
+# Run on your Mac: full help and all options
+./fail2ban-scripts/update-fail2ban.sh --help</pre>
 </div>
 
 </div><!-- .fb-server-panel -->
@@ -522,13 +513,14 @@ ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mv /tmp/sq
 	}
 
 	// ---------------------------------------------------------------
-	// STEP 3: Download config file for a server.
+	// STEP 3: Generate config file for a server in the project.
 	// ---------------------------------------------------------------
 	document.querySelectorAll('.fb-download-config-btn').forEach(function (btn) {
 		btn.addEventListener('click', function () {
 			var serverName = btn.dataset.serverName;
 			var slug       = serverName.replace(/\W/g, '-');
-			var msgEl      = document.getElementById('fb-dl-msg-' + slug);
+			var msgTarget  = btn.dataset.msgTarget;
+			var msgEl      = msgTarget ? document.getElementById(msgTarget) : document.getElementById('fb-dl-msg-' + slug);
 
 			btn.disabled = true;
 			setMsg(msgEl, 'Generating\u2026', '');
@@ -541,18 +533,7 @@ ssh <?php echo $safe_ssh_user; ?>@<?php echo $safe_hostname; ?> "sudo mv /tmp/sq
 						return;
 					}
 
-					// Trigger a browser download — config content never touches the DOM.
-					var blob = new Blob([data.config], { type: 'text/plain' });
-					var url  = URL.createObjectURL(blob);
-					var a    = document.createElement('a');
-					a.href     = url;
-					a.download = data.filename;
-					document.body.appendChild(a);
-					a.click();
-					document.body.removeChild(a);
-					URL.revokeObjectURL(url);
-
-					setMsg(msgEl, 'Downloaded \u2014 no token values are included.', 'ok');
+					setMsg(msgEl, 'Generated ' + (data.output_path || 'config file') + ' (overwritten).', 'ok');
 				})
 				.catch(function (e) {
 					btn.disabled = false;

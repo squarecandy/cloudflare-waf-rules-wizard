@@ -563,11 +563,45 @@ if ( $setting === 'fail2ban_download_config' ) {
 	}
 
 	$config = pw_generate_fail2ban_config( $matched_slug, $server_name, $list_uuids );
+	$slug   = preg_replace( '/[^a-z0-9-]/', '-', strtolower( $matched_slug ) );
+	$slug   = trim( $slug, '-' );
+	if ( '' === $slug ) {
+		$slug = 'server';
+	}
+
+	$output_rel_path = 'fail2ban-scripts/generated/cloudflare-fail2ban-config-' . $slug . '.txt';
+	$output_abs_path = __DIR__ . '/' . $output_rel_path;
+	$output_dir      = dirname( $output_abs_path );
+
+	if ( ! is_dir( $output_dir ) ) {
+		if ( ! mkdir( $output_dir, 0755, true ) ) {
+			echo json_encode(
+				array(
+					'success' => false,
+					'message' => 'Failed to create output directory: ' . $output_dir,
+				)
+			);
+			exit;
+		}
+	}
+
+	if ( false === file_put_contents( $output_abs_path, $config ) ) {
+		echo json_encode(
+			array(
+				'success' => false,
+				'message' => 'Failed to write config file: ' . $output_rel_path,
+			)
+		);
+		exit;
+	}
+
 	echo json_encode(
 		array(
-			'success'  => true,
-			'config'   => $config,
-			'filename' => 'cloudflare-fail2ban-config.txt',
+			'success'        => true,
+			'output_path'    => $output_rel_path,
+			'server_slug'    => $matched_slug,
+			'bytes_written'  => strlen( $config ),
+			'generated_file' => basename( $output_rel_path ),
 		)
 	);
 	exit;
