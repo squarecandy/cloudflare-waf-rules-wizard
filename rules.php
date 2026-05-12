@@ -224,6 +224,7 @@ $web_hosts = array(
 	'18403', // Vietnam, FPT Telecom Company - seen abusing Orion 2026/04
 	'7552', // Vietnam, Viettel Group - seen abusing Orion 2026/04
 	'45899', // Vietname, VNPT Corp - seen abusing Orion 2026/04
+	'55967', // Beijing Baidu Netcom Science and Technology Co., Ltd. - seen abusing MDHistory 2026/05
 );
 $web_hosts = implode( ' ', $web_hosts );
 
