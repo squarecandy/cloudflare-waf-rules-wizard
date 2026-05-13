@@ -298,24 +298,15 @@ tail -50 /var/log/cloudflare-fail2ban-sync.log</pre>
 	<pre class="fb-code"># Run on your Mac: preview the full update
 ./fail2ban-scripts/update-fail2ban.sh --dry-run <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?></pre>
 	<pre class="fb-code"># Run on your Mac: full update (config, filters, keys, jails, reload, sync)
-./fail2ban-scripts/update-fail2ban.sh <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
-
+./fail2ban-scripts/update-fail2ban.sh <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ) . "\n"; ?>
 # Run on your Mac: config-only update
-./fail2ban-scripts/update-fail2ban.sh --dry-run --config <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
-./fail2ban-scripts/update-fail2ban.sh --config <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
-
+./fail2ban-scripts/update-fail2ban.sh --dry-run --config <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ) . "\n"; ?>./fail2ban-scripts/update-fail2ban.sh --config <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ) . "\n"; ?>
 # Run on your Mac: API keys only
-./fail2ban-scripts/update-fail2ban.sh --dry-run --keys <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
-./fail2ban-scripts/update-fail2ban.sh --keys <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
-
+./fail2ban-scripts/update-fail2ban.sh --dry-run --keys <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ) . "\n"; ?>./fail2ban-scripts/update-fail2ban.sh --keys <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ) . "\n"; ?>
 # Run on your Mac: filters and jails only
-./fail2ban-scripts/update-fail2ban.sh --dry-run --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
-./fail2ban-scripts/update-fail2ban.sh --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
-
+./fail2ban-scripts/update-fail2ban.sh --dry-run --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ) . "\n"; ?>./fail2ban-scripts/update-fail2ban.sh --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ) . "\n"; ?>
 # Run on your Mac: combine components
-./fail2ban-scripts/update-fail2ban.sh --dry-run --config --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
-./fail2ban-scripts/update-fail2ban.sh --config --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ); ?>
-
+./fail2ban-scripts/update-fail2ban.sh --dry-run --config --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ) . "\n"; ?>./fail2ban-scripts/update-fail2ban.sh --config --filters <?php echo htmlspecialchars( $server_slug, ENT_QUOTES, 'UTF-8' ) . "\n"; ?>
 # Run on your Mac: full help and all options
 ./fail2ban-scripts/update-fail2ban.sh --help</pre>
 </div>
